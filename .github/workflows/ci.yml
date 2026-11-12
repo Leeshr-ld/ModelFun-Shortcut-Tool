@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows-tests:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PowerShell 7 syntax and self-test
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $PWD 'RoadLevelHotkeys.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.ToString() }
+            exit 1
+          }
+          & .\RoadLevelHotkeys.ps1 -SelfTest
+
+      - name: Unit and release tests
+        shell: pwsh
+        run: |
+          & .\tests\Test-ShortcutRules.ps1
+          & .\tests\Test-BackupWorkflow.ps1
+          & .\tests\Test-VersionInfo.ps1
+          & .\tests\Test-LayoutPolicy.ps1
+          & .\tests\Test-ReleasePackage.ps1

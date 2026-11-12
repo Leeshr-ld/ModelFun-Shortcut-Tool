@@ -1,0 +1,20 @@
+# Personal runtime configuration
+config.json
+
+# Generated release artifacts
+portable-dist/
+*.zip
+*.zip.sha256.txt
+
+# Runtime diagnostics and test screenshots
+诊断日志.txt
+*.log
+tests/*.png
+tests/*.jpg
+tests/_Temp*.ps1
+
+# Editor and OS files
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
