@@ -41,6 +41,7 @@ try {
     $required = @(
         'RoadLevelHotkeys.exe',
         'RoadLevelHotkeys.ps1',
+        'DpiSupport.ps1',
         'config.json',
         'ShortcutRules.ps1',
         'MouseAutomation.ps1',

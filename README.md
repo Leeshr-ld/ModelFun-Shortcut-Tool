@@ -58,7 +58,8 @@
 ## 系统要求
 
 - Windows 10 / 11
-- Windows PowerShell 5.1 或 PowerShell 7
+- Windows 10 / 11 内置的 Windows PowerShell 5.1（默认，完整支持PerMonitorV2）
+- PowerShell 7仅作为Windows PowerShell 5.1不可用时的备用启动环境
 - 运行和打包不需要第三方PowerShell模块
 
 ## 从源码运行
@@ -85,6 +86,8 @@ pwsh -NoProfile -File .\tests\Test-PanelBindings.ps1
 pwsh -NoProfile -File .\tests\Test-BackupWorkflow.ps1
 pwsh -NoProfile -File .\tests\Test-VersionInfo.ps1
 pwsh -NoProfile -File .\tests\Test-LayoutPolicy.ps1
+powershell -NoProfile -File .\tests\Test-DpiAwareness.ps1
+powershell -NoProfile -File .\tests\Test-UiStartup.ps1
 pwsh -NoProfile -File .\tests\Test-ReleasePackage.ps1
 ```
 
@@ -98,6 +101,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Test-MouseClick.ps1
 
 ```text
 RoadLevelHotkeys.ps1   主程序与界面
+DpiSupport.ps1         进程级PerMonitorV2 DPI初始化
 ShortcutRules.ps1      快捷键规则、冲突检测和默认设置
 MouseAutomation.ps1    快速鼠标点击与位置恢复
 BackupWorkflow.ps1     通用备份流程

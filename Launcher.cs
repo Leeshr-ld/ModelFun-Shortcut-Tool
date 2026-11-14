@@ -35,30 +35,40 @@ internal static class Program
             "-NoLogo -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{0}\"",
             scriptPath.Replace("\"", "\\\""));
 
-        try
-        {
-            StartPowerShell("pwsh.exe", arguments, appDirectory);
-            return 0;
-        }
-        catch
+        string systemPowerShell = Path.Combine(
+            Environment.SystemDirectory,
+            @"WindowsPowerShell\v1.0\powershell.exe");
+        Exception systemPowerShellError = null;
+
+        if (File.Exists(systemPowerShell))
         {
             try
             {
-                string systemPowerShell = Path.Combine(
-                    Environment.SystemDirectory,
-                    @"WindowsPowerShell\v1.0\powershell.exe");
                 StartPowerShell(systemPowerShell, arguments, appDirectory);
                 return 0;
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    "PowerShell启动失败：\r\n" + ex.Message,
-                    "模方面板快捷键助手",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                return 1;
+                systemPowerShellError = ex;
             }
+        }
+
+        try
+        {
+            StartPowerShell("pwsh.exe", arguments, appDirectory);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            string details = ex.Message;
+            if (systemPowerShellError != null)
+                details += "\r\nWindows PowerShell 5.1：" + systemPowerShellError.Message;
+            MessageBox.Show(
+                "PowerShell启动失败：\r\n" + details,
+                "模方面板快捷键助手",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return 1;
         }
     }
 

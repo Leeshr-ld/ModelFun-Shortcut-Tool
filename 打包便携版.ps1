@@ -27,6 +27,7 @@ $hashPath = "$zipPath.sha256.txt"
 $copyMap = @(
     @{ Source = 'RoadLevelHotkeys.exe'; Destination = 'RoadLevelHotkeys.exe' },
     @{ Source = 'RoadLevelHotkeys.ps1'; Destination = 'RoadLevelHotkeys.ps1' },
+    @{ Source = 'DpiSupport.ps1'; Destination = 'DpiSupport.ps1' },
     @{ Source = 'config.default.json'; Destination = 'config.json' },
     @{ Source = 'ShortcutRules.ps1'; Destination = 'ShortcutRules.ps1' },
     @{ Source = 'MouseAutomation.ps1'; Destination = 'MouseAutomation.ps1' },

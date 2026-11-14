@@ -3,11 +3,31 @@
 [CmdletBinding()]
 param(
     [switch]$SelfTest,
-    [switch]$Diagnostic
+    [switch]$Diagnostic,
+    [switch]$UiSmokeTest
 )
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+
+$dpiSupportPath = Join-Path $PSScriptRoot 'DpiSupport.ps1'
+if (-not (Test-Path -LiteralPath $dpiSupportPath -PathType Leaf)) {
+    throw "缺少DPI支持文件：$dpiSupportPath"
+}
+. $dpiSupportPath
+try {
+    $script:DpiInitialization = Initialize-PerMonitorDpiAwareness
+}
+catch {
+    $script:DpiInitialization = [pscustomobject]@{
+        SetSucceeded = $false
+        ErrorCode = 0
+        Awareness = 1
+        IsReady = $false
+        ErrorMessage = $_.Exception.Message
+    }
+}
+$script:DpiReady = [bool]$script:DpiInitialization.IsReady
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -365,7 +385,10 @@ namespace RoadLevel
 $script:AppDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 $script:ConfigPath = Join-Path $script:AppDirectory 'config.json'
 $script:ModelShortcutsPath = Join-Path $script:AppDirectory 'model_shortcuts.json'
-$script:DiagnosticEnabled = [bool]$Diagnostic
+$script:DiagnosticEnabled = ([bool]$Diagnostic -or [bool]$UiSmokeTest)
+$script:UiSmokeTest = [bool]$UiSmokeTest
+$script:UiSmokeTestCompleted = $false
+$script:UiSmokeTestError = ''
 $script:DiagnosticLogPath = Join-Path $script:AppDirectory '诊断日志.txt'
 . (Join-Path $script:AppDirectory 'ShortcutRules.ps1')
 . (Join-Path $script:AppDirectory 'MouseAutomation.ps1')
@@ -623,6 +646,9 @@ function Register-AllHotkeys {
 }
 
 function Set-Status([string]$text, [string]$color = '#1F5F99') {
+    if (-not $script:DpiReady) {
+        $text = "DPI受限：$text"
+    }
     $script:LastMessage = $text
     $statusLabel.ForeColor = [System.Drawing.ColorTranslator]::FromHtml($color)
     $statusLabel.Text = $text
@@ -943,9 +969,12 @@ function Refresh-BindingGrid($panel) {
         $name = [string]$entry.Key
         $button = $entry.Value
         $binding = Get-ActionBinding -Config $script:Config -PanelTitle $panelTitle -ActionName $name
+        $conflicts = @()
         if ($name -eq 'backup') {
             $globalConflict = Find-GlobalBackupConflict -Candidate $binding -Config $script:Config -ModelConflicts $script:ModelShortcutConflicts
-            $conflicts = if ($null -eq $globalConflict) { @() } else { @($globalConflict) }
+            if ($null -ne $globalConflict) {
+                $conflicts = @($globalConflict)
+            }
         }
         else {
             $conflicts = @(Get-BindingConflictList -ActionName $name -Binding $binding -Bindings $conflictScope -ModelConflicts $script:ModelShortcutConflicts)
@@ -1348,9 +1377,12 @@ function Show-ShortcutEditor([string]$ActionName) {
             default { $draft.mouseButton = '' }
         }
 
+        $conflicts = @()
         if ($isBackupAction) {
             $globalConflict = Find-GlobalBackupConflict -Candidate $draft -Config $script:Config -ModelConflicts $script:ModelShortcutConflicts
-            $conflicts = if ($null -eq $globalConflict) { @() } else { @($globalConflict) }
+            if ($null -ne $globalConflict) {
+                $conflicts = @($globalConflict)
+            }
         }
         else {
             $scope = Get-ConflictScopeBindings -Config $script:Config -PanelTitle $panelTitle
@@ -1422,9 +1454,12 @@ function Show-ShortcutEditor([string]$ActionName) {
             return
         }
 
+        $conflicts = @()
         if ($isBackupAction) {
             $globalConflict = Find-GlobalBackupConflict -Candidate $draft -Config $script:Config -ModelConflicts $script:ModelShortcutConflicts
-            $conflicts = if ($null -eq $globalConflict) { @() } else { @($globalConflict) }
+            if ($null -ne $globalConflict) {
+                $conflicts = @($globalConflict)
+            }
         }
         else {
             $scope = Get-ConflictScopeBindings -Config $script:Config -PanelTitle $panelTitle
@@ -1706,7 +1741,7 @@ if ($SelfTest) {
 
 $currentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
 $currentPrincipal = New-Object System.Security.Principal.WindowsPrincipal($currentIdentity)
-if (-not $currentPrincipal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)) {
+if (-not $currentPrincipal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator) -and -not $script:UiSmokeTest) {
     [System.Windows.Forms.MessageBox]::Show(
         '模方正以管理员权限运行。请关闭本窗口，双击 RoadLevelHotkeys.exe 并在UAC提示中点击“是”。',
         '需要管理员权限',
@@ -2029,6 +2064,11 @@ $form.Add_Shown({
         Fit-MainFormToWorkingArea
         Update-MainWindowLayout
         Load-ConfigurationIntoUi
+        if ($script:UiSmokeTest) {
+            $script:UiSmokeTestCompleted = $true
+            [void]$form.BeginInvoke([System.Windows.Forms.MethodInvoker]{ $form.Close() })
+            return
+        }
         $timer.Start()
         if ($script:DiagnosticEnabled) {
             $testId = 0x7F01
@@ -2044,6 +2084,16 @@ $form.Add_Shown({
         }
     }
     catch {
+        Write-DiagnosticLog (
+            "INITIALIZATION_FAILED={0}; STACK={1}" -f
+            $_.Exception.Message,
+            (($_.ScriptStackTrace -replace '\r?\n', ' | '))
+        )
+        if ($script:UiSmokeTest) {
+            $script:UiSmokeTestError = $_.Exception.Message
+            [void]$form.BeginInvoke([System.Windows.Forms.MethodInvoker]{ $form.Close() })
+            return
+        }
         [System.Windows.Forms.MessageBox]::Show(
             $_.Exception.Message,
             '初始化失败',
@@ -2061,3 +2111,19 @@ $form.Add_FormClosing({
 })
 
 [void]$form.ShowDialog()
+
+if ($script:UiSmokeTest) {
+    $form.Dispose()
+    if ($script:UiSmokeTestCompleted -and [string]::IsNullOrWhiteSpace($script:UiSmokeTestError)) {
+        Write-Output 'PASS Windows PowerShell UI initialization completes without errors'
+        exit 0
+    }
+    $message = if ([string]::IsNullOrWhiteSpace($script:UiSmokeTestError)) {
+        '主窗口未完成初始化'
+    }
+    else {
+        $script:UiSmokeTestError
+    }
+    Write-Error "FAIL Windows PowerShell UI initialization: $message"
+    exit 1
+}
