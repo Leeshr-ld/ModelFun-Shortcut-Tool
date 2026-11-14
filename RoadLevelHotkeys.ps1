@@ -473,11 +473,7 @@ function Write-DiagnosticLog([string]$message) {
 }
 
 function Get-DefaultConfig {
-    return [pscustomobject]@{
-        version = 3
-        targetTitle = '模方ModelFun'
-        bindings = Get-DefaultBindings
-    }
+    return New-DefaultShortcutConfig -TargetTitle '模方ModelFun'
 }
 
 function Load-Config {
@@ -489,22 +485,10 @@ function Load-Config {
         $script:Config = Get-Content -LiteralPath $script:ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
     }
 
-    $defaults = Get-DefaultConfig
-    if (-not $script:Config.PSObject.Properties['version'] -or [int]$script:Config.version -lt 2) {
-        $script:Config = $defaults
+    $loadedVersion = if ($script:Config.PSObject.Properties['version']) { [int]$script:Config.version } else { 0 }
+    $script:Config = ConvertTo-V4ShortcutConfig -Config $script:Config
+    if ($loadedVersion -lt 4) {
         Write-Config
-    }
-    if (-not $script:Config.PSObject.Properties['targetTitle']) {
-        $script:Config | Add-Member -NotePropertyName targetTitle -NotePropertyValue $defaults.targetTitle
-    }
-    if (-not $script:Config.PSObject.Properties['bindings']) {
-        $script:Config | Add-Member -NotePropertyName bindings -NotePropertyValue $defaults.bindings
-    }
-
-    foreach ($name in $script:ActionOrder) {
-        if (-not $script:Config.bindings.PSObject.Properties[$name]) {
-            $script:Config.bindings | Add-Member -NotePropertyName $name -NotePropertyValue $defaults.bindings.$name
-        }
     }
 
     if (Test-Path -LiteralPath $script:ModelShortcutsPath) {
@@ -598,8 +582,13 @@ function Register-AllHotkeys {
     }
 
     $index = 0
+    $panelTitle = if ($null -ne $panel) { [string]$panel.Title } else { '' }
     foreach ($name in $availableActions) {
-        $binding = $script:Config.bindings.$name
+        $binding = Get-ActionBinding -Config $script:Config -PanelTitle $panelTitle -ActionName $name
+        if ($null -eq $binding) {
+            $index++
+            continue
+        }
         $keyCode = Get-BindingKeyCode $binding
         if ($null -eq $keyCode) {
             $index++
@@ -762,7 +751,7 @@ function Invoke-PanelButton([string]$name) {
         return
     }
     if (-not $panel.Profile.buttons.Contains($name)) {
-        $bindingName = [string]$script:Config.bindings.$name.displayName
+        $bindingName = if ($name -eq 'backup') { '备份' } else { $name }
         Set-Status ("当前「{0}」面板没有「{1}」操作。" -f $panel.Title, $bindingName) '#B9770E'
         return
     }
@@ -816,10 +805,15 @@ function Poll-MouseBindings {
     $target = Get-TargetWindow
     $active = $target -ne [IntPtr]::Zero -and [RoadLevel.WinApi]::IsTargetActive($target, [string]$script:Config.targetTitle)
     $panel = if ($active) { Get-ActivePanel } else { $null }
+    $panelTitle = if ($null -ne $panel) { [string]$panel.Title } else { '' }
 
     foreach ($name in $script:ActionOrder) {
-        $binding = $script:Config.bindings.$name
+        $binding = Get-ActionBinding -Config $script:Config -PanelTitle $panelTitle -ActionName $name
         $virtualKey = 0
+        if ($null -eq $binding) {
+            $script:MouseWasDown[$name] = $false
+            continue
+        }
         switch ([string]$binding.mouseButton) {
             'XButton1' { $virtualKey = 0x05 }
             'XButton2' { $virtualKey = 0x06 }
@@ -835,8 +829,7 @@ function Poll-MouseBindings {
         if ($script:MouseWasDown.ContainsKey($name)) {
             $wasDown = [bool]$script:MouseWasDown[$name]
         }
-        $available = $name -eq 'backup' -or ($null -ne $panel -and $panel.Profile.buttons.Contains($name))
-        if ($script:Enabled -and $active -and $available -and $down -and -not $wasDown) {
+        if ($script:Enabled -and $active -and $down -and -not $wasDown) {
             Invoke-PanelButton $name
         }
         $script:MouseWasDown[$name] = $down
@@ -847,6 +840,7 @@ function Poll-KeyboardBindings {
     $target = Get-TargetWindow
     $active = $target -ne [IntPtr]::Zero -and [RoadLevel.WinApi]::IsTargetActive($target, [string]$script:Config.targetTitle)
     $panel = if ($active) { Get-ActivePanel } else { $null }
+    $panelTitle = if ($null -ne $panel) { [string]$panel.Title } else { '' }
     $ctrlDown = [RoadLevel.WinApi]::IsKeyDown(0x11)
     $altDown = [RoadLevel.WinApi]::IsKeyDown(0x12)
     $shiftDown = [RoadLevel.WinApi]::IsKeyDown(0x10)
@@ -860,7 +854,11 @@ function Poll-KeyboardBindings {
     }
 
     foreach ($name in $script:ActionOrder) {
-        $binding = $script:Config.bindings.$name
+        $binding = Get-ActionBinding -Config $script:Config -PanelTitle $panelTitle -ActionName $name
+        if ($null -eq $binding) {
+            $script:KeyboardWasDown[$name] = $false
+            continue
+        }
         $keyCode = Get-BindingKeyCode $binding
         $down = $false
         if ($null -ne $keyCode) {
@@ -874,8 +872,7 @@ function Poll-KeyboardBindings {
         if ($script:KeyboardWasDown.ContainsKey($name)) {
             $wasDown = [bool]$script:KeyboardWasDown[$name]
         }
-        $available = $name -eq 'backup' -or ($null -ne $panel -and $panel.Profile.buttons.Contains($name))
-        if ($script:Enabled -and $active -and $available -and $down -and -not $wasDown) {
+        if ($script:Enabled -and $active -and $down -and -not $wasDown) {
             Write-DiagnosticLog ("KEYBOARD_EDGE={0}" -f $name)
             Invoke-PanelButton $name
         }
@@ -896,12 +893,20 @@ function Refresh-BindingGrid($panel) {
             $displayItems[$entry.Key] = $entry.Value
         }
     }
+    $panelTitle = if ($null -ne $panel) { [string]$panel.Title } else { '' }
+    $conflictScope = Get-ConflictScopeBindings -Config $script:Config -PanelTitle $panelTitle
 
     foreach ($entry in $displayItems.GetEnumerator()) {
         $name = [string]$entry.Key
         $button = $entry.Value
-        $binding = $script:Config.bindings.$name
-        $conflicts = @(Get-BindingConflictList -ActionName $name -Binding $binding -Bindings $script:Config.bindings -ModelConflicts $script:ModelShortcutConflicts)
+        $binding = Get-ActionBinding -Config $script:Config -PanelTitle $panelTitle -ActionName $name
+        if ($name -eq 'backup') {
+            $globalConflict = Find-GlobalBackupConflict -Candidate $binding -Config $script:Config -ModelConflicts $script:ModelShortcutConflicts
+            $conflicts = if ($null -eq $globalConflict) { @() } else { @($globalConflict) }
+        }
+        else {
+            $conflicts = @(Get-BindingConflictList -ActionName $name -Binding $binding -Bindings $conflictScope -ModelConflicts $script:ModelShortcutConflicts)
+        }
         $status = '正常'
         $statusColor = [System.Drawing.Color]::FromArgb(30, 105, 60)
         if ($conflicts.Count -gt 0) {
@@ -950,7 +955,7 @@ function Refresh-BindingGrid($panel) {
         $shortcutNoticeLabel.ForeColor = [System.Drawing.Color]::FromArgb(30, 105, 60)
     }
 
-    $backupDisplay = Get-ShortcutDisplay $script:Config.bindings.backup
+    $backupDisplay = Get-ShortcutDisplay (Get-ActionBinding -Config $script:Config -PanelTitle '' -ActionName 'backup')
     $hintLabel.Text = "面板切换后自动刷新；通用备份：$backupDisplay；双击表格行可修改快捷键。"
 }
 
@@ -1188,7 +1193,8 @@ function Show-ShortcutEditor([string]$ActionName) {
     else {
         $panel.Profile.buttons[$ActionName]
     }
-    $currentBinding = $script:Config.bindings.$ActionName
+    $panelTitle = if ($isBackupAction) { '' } else { [string]$panel.Title }
+    $currentBinding = Get-ActionBinding -Config $script:Config -PanelTitle $panelTitle -ActionName $ActionName
     $draft = $currentBinding.PSObject.Copy()
     $script:EditingShortcuts = $true
     Unregister-AllHotkeys
@@ -1295,7 +1301,14 @@ function Show-ShortcutEditor([string]$ActionName) {
             default { $draft.mouseButton = '' }
         }
 
-        $conflicts = @(Get-BindingConflictList -ActionName $ActionName -Binding $draft -Bindings $script:Config.bindings -ModelConflicts $script:ModelShortcutConflicts)
+        if ($isBackupAction) {
+            $globalConflict = Find-GlobalBackupConflict -Candidate $draft -Config $script:Config -ModelConflicts $script:ModelShortcutConflicts
+            $conflicts = if ($null -eq $globalConflict) { @() } else { @($globalConflict) }
+        }
+        else {
+            $scope = Get-ConflictScopeBindings -Config $script:Config -PanelTitle $panelTitle
+            $conflicts = @(Get-BindingConflictList -ActionName $ActionName -Binding $draft -Bindings $scope -ModelConflicts $script:ModelShortcutConflicts)
+        }
         if ($conflicts.Count -eq 0) {
             $conflictLabel.Text = '未发现冲突。'
             $conflictLabel.ForeColor = [System.Drawing.Color]::FromArgb(30, 105, 60)
@@ -1362,7 +1375,14 @@ function Show-ShortcutEditor([string]$ActionName) {
             return
         }
 
-        $conflicts = @(Get-BindingConflictList -ActionName $ActionName -Binding $draft -Bindings $script:Config.bindings -ModelConflicts $script:ModelShortcutConflicts)
+        if ($isBackupAction) {
+            $globalConflict = Find-GlobalBackupConflict -Candidate $draft -Config $script:Config -ModelConflicts $script:ModelShortcutConflicts
+            $conflicts = if ($null -eq $globalConflict) { @() } else { @($globalConflict) }
+        }
+        else {
+            $scope = Get-ConflictScopeBindings -Config $script:Config -PanelTitle $panelTitle
+            $conflicts = @(Get-BindingConflictList -ActionName $ActionName -Binding $draft -Bindings $scope -ModelConflicts $script:ModelShortcutConflicts)
+        }
         $internalConflict = $conflicts | Where-Object Kind -eq 'Internal' | Select-Object -First 1
         if ($null -ne $internalConflict) {
             [System.Windows.Forms.MessageBox]::Show(
@@ -1397,7 +1417,7 @@ function Show-ShortcutEditor([string]$ActionName) {
             return
         }
 
-        $script:Config.bindings.PSObject.Properties[$ActionName].Value = $draft
+        Set-ActionBinding -Config $script:Config -PanelTitle $panelTitle -ActionName $ActionName -Binding $draft | Out-Null
         Write-Config
         $dialog.DialogResult = [System.Windows.Forms.DialogResult]::OK
         $dialog.Close()
@@ -1540,13 +1560,31 @@ function Refresh-Detection([switch]$ShowDialog) {
 
 if ($SelfTest) {
         Load-Config
-        $resolvedBindings = [ordered]@{}
+        $resolvedBindings = [ordered]@{
+            common = [ordered]@{}
+            panels = [ordered]@{}
+        }
         foreach ($name in $script:ActionOrder) {
-            $keyCode = Get-BindingKeyCode $script:Config.bindings.$name
-            if ($null -eq $keyCode) {
-                throw "快捷键解析失败：$name"
+            $binding = Get-ActionBinding -Config $script:Config -PanelTitle '' -ActionName $name
+            if ($null -eq $binding) {
+                continue
             }
-            $resolvedBindings[$name] = $keyCode
+            $keyCode = Get-BindingKeyCode $binding
+            if ($null -eq $keyCode) {
+                throw "通用快捷键解析失败：$name"
+            }
+            $resolvedBindings.common[$name] = $keyCode
+        }
+        foreach ($panelTitle in Get-PanelTitles) {
+            $resolvedBindings.panels[$panelTitle] = [ordered]@{}
+            foreach ($name in Get-PanelActionNames $panelTitle) {
+                $binding = Get-ActionBinding -Config $script:Config -PanelTitle $panelTitle -ActionName $name
+                $keyCode = Get-BindingKeyCode $binding
+                if ($null -eq $keyCode) {
+                    throw "快捷键解析失败：$panelTitle/$name"
+                }
+                $resolvedBindings.panels[$panelTitle][$name] = $keyCode
+            }
         }
 
         $profileChecks = [ordered]@{}
@@ -1606,7 +1644,7 @@ if ($SelfTest) {
             config = $script:ConfigPath
             appVersion = $script:AppVersion
             versionHistory = @($script:VersionInfo.history | ForEach-Object version)
-            backupKey = $script:Config.bindings.backup.key
+            backupKey = (Get-ActionBinding -Config $script:Config -PanelTitle '' -ActionName 'backup').key
             bindings = $resolvedBindings
             keyboardMode = 'window-hotkey'
             modelShortcutConflicts = @($script:ModelShortcutConflicts).Count

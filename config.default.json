@@ -1,7 +1,7 @@
 {
-  "version": 3,
+  "version": 4,
   "targetTitle": "模方ModelFun",
-  "bindings": {
+  "commonBindings": {
     "backup": {
       "displayName": "备份当前工程瓦片",
       "key": "B",
@@ -9,118 +9,264 @@
       "alt": true,
       "shift": false,
       "mouseButton": ""
+    }
+  },
+  "panelBindings": {
+    "道路置平": {
+      "slot1": {
+        "displayName": "位置按钮1",
+        "key": "1",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "undo": {
+        "displayName": "撤销",
+        "key": "Z",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": "XButton1"
+      },
+      "redo": {
+        "displayName": "重做",
+        "key": "R",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": "XButton2"
+      },
+      "confirm": {
+        "displayName": "确认",
+        "key": "Enter",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "cancel": {
+        "displayName": "取消",
+        "key": "X",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      }
     },
-    "slot1": {
-      "displayName": "位置按钮1",
-      "key": "1",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": ""
+    "表面置平": {
+      "slot1": {
+        "displayName": "位置按钮1",
+        "key": "1",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "slot2": {
+        "displayName": "位置按钮2",
+        "key": "2",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "undo": {
+        "displayName": "撤销",
+        "key": "Z",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": "XButton1"
+      },
+      "redo": {
+        "displayName": "重做",
+        "key": "R",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": "XButton2"
+      },
+      "confirm": {
+        "displayName": "确认",
+        "key": "Enter",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "cancel": {
+        "displayName": "取消",
+        "key": "X",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      }
     },
-    "slot2": {
-      "displayName": "位置按钮2",
-      "key": "2",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": ""
+    "指定置平": {
+      "slot1": {
+        "displayName": "位置按钮1",
+        "key": "1",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "slot2": {
+        "displayName": "位置按钮2",
+        "key": "2",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "slot3": {
+        "displayName": "位置按钮3",
+        "key": "3",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "slot4": {
+        "displayName": "位置按钮4",
+        "key": "4",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "undo": {
+        "displayName": "撤销",
+        "key": "Z",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": "XButton1"
+      },
+      "redo": {
+        "displayName": "重做",
+        "key": "R",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": "XButton2"
+      },
+      "toggle1": {
+        "displayName": "选项切换1",
+        "key": "H",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "toggle2": {
+        "displayName": "选项切换2",
+        "key": "O",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "confirm": {
+        "displayName": "确认",
+        "key": "Enter",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "cancel": {
+        "displayName": "取消",
+        "key": "X",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      }
     },
-    "slot3": {
-      "displayName": "位置按钮3",
-      "key": "3",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": ""
-    },
-    "slot4": {
-      "displayName": "位置按钮4",
-      "key": "4",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": ""
-    },
-    "slot5": {
-      "displayName": "位置按钮5",
-      "key": "5",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": ""
-    },
-    "slot6": {
-      "displayName": "位置按钮6",
-      "key": "6",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": ""
-    },
-    "slot7": {
-      "displayName": "位置按钮7",
-      "key": "7",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": ""
-    },
-    "slot8": {
-      "displayName": "位置按钮8",
-      "key": "8",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": ""
-    },
-    "toggle1": {
-      "displayName": "选项切换1",
-      "key": "H",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": ""
-    },
-    "toggle2": {
-      "displayName": "选项切换2",
-      "key": "O",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": ""
-    },
-    "undo": {
-      "displayName": "撤销",
-      "key": "Z",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": "XButton1"
-    },
-    "redo": {
-      "displayName": "重做",
-      "key": "R",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": "XButton2"
-    },
-    "confirm": {
-      "displayName": "确认",
-      "key": "Enter",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": ""
-    },
-    "cancel": {
-      "displayName": "取消",
-      "key": "X",
-      "ctrl": true,
-      "alt": true,
-      "shift": false,
-      "mouseButton": ""
+    "补洞": {
+      "slot1": {
+        "displayName": "位置按钮1",
+        "key": "1",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "slot2": {
+        "displayName": "位置按钮2",
+        "key": "2",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "slot3": {
+        "displayName": "位置按钮3",
+        "key": "3",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "slot4": {
+        "displayName": "位置按钮4",
+        "key": "4",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "slot5": {
+        "displayName": "位置按钮5",
+        "key": "5",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "slot6": {
+        "displayName": "位置按钮6",
+        "key": "6",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "undo": {
+        "displayName": "撤销",
+        "key": "Z",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": "XButton1"
+      },
+      "redo": {
+        "displayName": "重做",
+        "key": "R",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": "XButton2"
+      },
+      "confirm": {
+        "displayName": "确认",
+        "key": "Enter",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      },
+      "cancel": {
+        "displayName": "取消",
+        "key": "X",
+        "ctrl": true,
+        "alt": true,
+        "shift": false,
+        "mouseButton": ""
+      }
     }
   }
 }
