@@ -74,7 +74,8 @@ Invoke-Test '检测助手内部重复绑定' {
 
 Invoke-Test '恢复默认保留目标标题并替换全部绑定' {
     $changed = [pscustomobject]@{
-        version = 2
+        version = 5
+        language = 'en-US'
         targetTitle = '测试模方'
         bindings = [pscustomobject]@{
             slot1 = New-TestBinding 'F9'
@@ -87,6 +88,7 @@ Invoke-Test '恢复默认保留目标标题并替换全部绑定' {
     Assert-Equal '1' $actual.panelBindings.'表面置平'.slot1.key '表面置平slot1未恢复默认'
     Assert-Equal 'Z' $actual.panelBindings.'补洞'.undo.key '补洞撤销未恢复默认'
     Assert-Equal 'XButton1' $actual.panelBindings.'补洞'.undo.mouseButton '撤销鼠标键未恢复默认'
+    Assert-Equal 'en-US' $actual.language '重置快捷键不应修改界面语言'
 }
 
 Invoke-Test '同时返回键盘和鼠标冲突不发生动态绑定异常' {

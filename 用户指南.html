@@ -1,0 +1,1552 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>模方面板快捷键助手 · 用户指南</title>
+  <style>
+    :root {
+      --ink: #173247;
+      --ink-soft: #496475;
+      --navy: #123a52;
+      --blue: #226f91;
+      --blue-soft: #dcecf2;
+      --teal: #1f8d8a;
+      --amber: #c87821;
+      --amber-soft: #fff1dc;
+      --paper: #f4f7f8;
+      --surface: #ffffff;
+      --line: #cfdde3;
+      --line-strong: #a8c0cb;
+      --ok: #227457;
+      --shadow: 0 18px 55px rgba(18, 58, 82, 0.10);
+      --radius-sm: 8px;
+      --radius: 14px;
+      --radius-lg: 22px;
+      --content: 760px;
+      --sans: "Microsoft YaHei UI", "Segoe UI", "PingFang SC", sans-serif;
+      --mono: "Cascadia Mono", Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 92px;
+    }
+
+    body {
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        linear-gradient(rgba(34, 111, 145, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34, 111, 145, 0.035) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.65;
+      text-rendering: optimizeLegibility;
+    }
+
+    a {
+      color: var(--blue);
+      text-underline-offset: 3px;
+    }
+
+    button,
+    summary {
+      font: inherit;
+    }
+
+    button:focus-visible,
+    a:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid rgba(31, 141, 138, 0.48);
+      outline-offset: 3px;
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 100;
+      left: 16px;
+      top: -80px;
+      padding: 10px 16px;
+      color: white;
+      background: var(--navy);
+      border-radius: var(--radius-sm);
+      transition: top 160ms ease;
+    }
+
+    .skip-link:focus {
+      top: 16px;
+    }
+
+    .site-header {
+      position: sticky;
+      z-index: 50;
+      top: 0;
+      border-bottom: 1px solid rgba(168, 192, 203, 0.75);
+      background: rgba(244, 247, 248, 0.94);
+      backdrop-filter: blur(14px);
+    }
+
+    .header-inner {
+      width: min(1180px, calc(100% - 40px));
+      min-height: 68px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      background: var(--surface);
+    }
+
+    .brand-copy {
+      min-width: 0;
+    }
+
+    .brand-title {
+      display: block;
+      overflow: hidden;
+      color: var(--navy);
+      font-size: 15px;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .brand-meta {
+      display: block;
+      color: var(--ink-soft);
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+
+    .language-toggle {
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      padding: 3px;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      background: var(--surface);
+    }
+
+    .language-toggle button {
+      min-width: 74px;
+      min-height: 34px;
+      padding: 5px 12px;
+      color: var(--ink-soft);
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      cursor: pointer;
+      transition: color 140ms ease, background 140ms ease;
+    }
+
+    .language-toggle button:hover {
+      color: var(--navy);
+      background: var(--blue-soft);
+    }
+
+    .language-toggle button[aria-pressed="true"] {
+      color: white;
+      background: var(--navy);
+    }
+
+    .hero {
+      width: min(1180px, calc(100% - 40px));
+      margin: 34px auto 28px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(420px, 0.92fr);
+      align-items: center;
+      gap: 38px;
+      padding: 44px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, #ffffff 0%, #f8fbfc 58%, #e6f1f4 100%);
+      box-shadow: var(--shadow);
+    }
+
+    .hero > *,
+    .layout > *,
+    .header-inner > * {
+      min-width: 0;
+    }
+
+    .hero-kicker {
+      margin: 0 0 12px;
+      color: var(--teal);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .hero h1 {
+      max-width: 680px;
+      margin: 0;
+      color: var(--navy);
+      font-size: clamp(36px, 5vw, 62px);
+      line-height: 1.04;
+      letter-spacing: -0.04em;
+      text-wrap: balance;
+    }
+
+    .hero-lead {
+      max-width: 640px;
+      margin: 20px 0 0;
+      color: var(--ink-soft);
+      font-size: 18px;
+      line-height: 1.55;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 26px;
+    }
+
+    .button-primary,
+    .button-secondary {
+      display: inline-flex;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 17px;
+      border-radius: 10px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .button-primary {
+      color: white;
+      background: var(--navy);
+    }
+
+    .button-primary:hover {
+      background: #0d2e42;
+    }
+
+    .button-secondary {
+      color: var(--navy);
+      border: 1px solid var(--line-strong);
+      background: white;
+    }
+
+    .button-secondary:hover {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .hero-figure {
+      position: relative;
+      min-height: 370px;
+      display: grid;
+      place-items: center;
+    }
+
+    .hero-figure::before {
+      content: "";
+      position: absolute;
+      width: 330px;
+      height: 330px;
+      border: 1px solid rgba(34, 111, 145, 0.22);
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 36px rgba(34, 111, 145, 0.055),
+        0 0 0 72px rgba(34, 111, 145, 0.035);
+    }
+
+    .panel-map {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 500px;
+      height: auto;
+      filter: drop-shadow(0 16px 18px rgba(18, 58, 82, 0.12));
+    }
+
+    .layout {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto 64px;
+      display: grid;
+      grid-template-columns: 230px minmax(0, var(--content));
+      justify-content: center;
+      gap: 46px;
+      align-items: start;
+    }
+
+    .toc {
+      position: sticky;
+      top: 94px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .toc-title {
+      margin: 0 0 12px;
+      color: var(--navy);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .toc ol {
+      display: grid;
+      gap: 5px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: toc;
+    }
+
+    .toc li {
+      counter-increment: toc;
+    }
+
+    .toc a {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      gap: 7px;
+      padding: 7px 8px;
+      color: var(--ink-soft);
+      border-radius: 7px;
+      font-size: 13px;
+      line-height: 1.4;
+      text-decoration: none;
+    }
+
+    .toc a::before {
+      content: counter(toc, decimal-leading-zero);
+      color: var(--blue);
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .toc a:hover {
+      color: var(--navy);
+      background: var(--blue-soft);
+    }
+
+    .guide {
+      min-width: 0;
+    }
+
+    .section {
+      margin: 0 0 62px;
+    }
+
+    .section-heading {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr);
+      gap: 15px;
+      align-items: start;
+      margin-bottom: 22px;
+    }
+
+    .section-index {
+      display: grid;
+      width: 48px;
+      height: 48px;
+      place-items: center;
+      color: white;
+      border-radius: 50% 50% 50% 14px;
+      background: var(--navy);
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .section h2 {
+      margin: 0;
+      color: var(--navy);
+      font-size: clamp(26px, 4vw, 38px);
+      line-height: 1.18;
+      letter-spacing: -0.025em;
+      text-wrap: balance;
+    }
+
+    .section-intro {
+      max-width: 66ch;
+      margin: 7px 0 0;
+      color: var(--ink-soft);
+    }
+
+    .step-list {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: steps;
+    }
+
+    .step-list li {
+      position: relative;
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+      padding: 17px 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: white;
+      counter-increment: steps;
+    }
+
+    .step-list li::before {
+      content: counter(steps);
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      color: var(--blue);
+      border: 1px solid var(--line-strong);
+      border-radius: 50%;
+      background: var(--blue-soft);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .step-list strong {
+      display: block;
+      color: var(--navy);
+      font-size: 15px;
+    }
+
+    .step-list p {
+      margin: 3px 0 0;
+      color: var(--ink-soft);
+      font-size: 14px;
+    }
+
+    .mock-window {
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: white;
+      box-shadow: 0 14px 35px rgba(18, 58, 82, 0.09);
+    }
+
+    .mock-titlebar {
+      display: flex;
+      min-height: 40px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 7px 13px;
+      color: white;
+      background: var(--navy);
+      font-size: 12px;
+    }
+
+    .mock-window-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .mock-window-dots span {
+      width: 8px;
+      height: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      border-radius: 50%;
+    }
+
+    .mock-body {
+      display: grid;
+      gap: 10px;
+      padding: 18px;
+    }
+
+    .mock-top {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .mock-heading {
+      display: grid;
+      gap: 2px;
+    }
+
+    .mock-heading strong {
+      color: var(--navy);
+      font-size: 20px;
+    }
+
+    .mock-heading span {
+      color: var(--ink-soft);
+      font-size: 10px;
+    }
+
+    .mock-language {
+      min-width: 104px;
+      padding: 5px 8px;
+      border: 1px solid var(--line-strong);
+      border-radius: 4px;
+      background: white;
+      font-size: 11px;
+    }
+
+    .mock-status {
+      color: var(--amber);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .mock-table {
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: 2px;
+      font-size: 11px;
+    }
+
+    .mock-row {
+      display: grid;
+      grid-template-columns: 1.45fr 1fr 0.8fr 0.55fr;
+    }
+
+    .mock-row > span {
+      min-width: 0;
+      padding: 6px 8px;
+      overflow: hidden;
+      border-right: 1px solid var(--line);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mock-row > span:last-child {
+      border-right: 0;
+    }
+
+    .mock-row.header {
+      color: var(--navy);
+      background: #eef5f7;
+      font-weight: 800;
+    }
+
+    .mock-row.data {
+      min-height: 92px;
+      align-items: start;
+      color: var(--blue);
+    }
+
+    .mock-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .mock-buttons span {
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      background: #f8fafb;
+      font-size: 10px;
+    }
+
+    .mock-buttons span:first-child {
+      color: white;
+      border-color: var(--blue);
+      background: var(--blue);
+    }
+
+    .annotation-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .annotation {
+      padding: 13px;
+      border-left: 3px solid var(--teal);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      background: white;
+      font-size: 13px;
+    }
+
+    .annotation strong {
+      display: block;
+      color: var(--navy);
+      font-size: 13px;
+    }
+
+    .callout {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: 12px;
+      margin: 20px 0;
+      padding: 16px;
+      border: 1px solid #e7c796;
+      border-radius: var(--radius);
+      background: var(--amber-soft);
+    }
+
+    .callout svg {
+      width: 30px;
+      height: 30px;
+      color: var(--amber);
+    }
+
+    .callout strong {
+      display: block;
+      color: #7b4a14;
+    }
+
+    .callout p {
+      margin: 3px 0 0;
+      color: #66431e;
+      font-size: 14px;
+    }
+
+    .key {
+      display: inline-block;
+      min-width: 28px;
+      padding: 1px 7px 2px;
+      color: var(--navy);
+      border: 1px solid var(--line-strong);
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      background: white;
+      font-family: var(--mono);
+      font-size: 0.88em;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: white;
+    }
+
+    .flow-step {
+      position: relative;
+      min-height: 152px;
+      padding: 22px 16px;
+      border-right: 1px solid var(--line);
+    }
+
+    .flow-step:last-child {
+      border-right: 0;
+    }
+
+    .flow-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      z-index: 2;
+      top: 34px;
+      right: -7px;
+      width: 13px;
+      height: 13px;
+      border-top: 2px solid var(--teal);
+      border-right: 2px solid var(--teal);
+      background: white;
+      transform: rotate(45deg);
+    }
+
+    .flow-icon {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      margin-bottom: 12px;
+      color: var(--blue);
+      border-radius: 10px;
+      background: var(--blue-soft);
+    }
+
+    .flow-icon svg {
+      width: 21px;
+      height: 21px;
+    }
+
+    .flow-step strong {
+      display: block;
+      color: var(--navy);
+      font-size: 14px;
+    }
+
+    .flow-step p {
+      margin: 4px 0 0;
+      color: var(--ink-soft);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .tool-card {
+      padding: 19px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: white;
+    }
+
+    .tool-card svg {
+      width: 27px;
+      height: 27px;
+      margin-bottom: 12px;
+      color: var(--blue);
+    }
+
+    .tool-card strong {
+      display: block;
+      color: var(--navy);
+    }
+
+    .tool-card p {
+      margin: 5px 0 0;
+      color: var(--ink-soft);
+      font-size: 13px;
+    }
+
+    .troubleshooting {
+      display: grid;
+      gap: 9px;
+    }
+
+    .troubleshooting details {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: white;
+    }
+
+    .troubleshooting summary {
+      position: relative;
+      padding: 15px 48px 15px 17px;
+      color: var(--navy);
+      cursor: pointer;
+      font-weight: 700;
+      list-style: none;
+    }
+
+    .troubleshooting summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .troubleshooting summary::after {
+      content: "+";
+      position: absolute;
+      top: 50%;
+      right: 18px;
+      color: var(--blue);
+      font-family: var(--mono);
+      font-size: 21px;
+      transform: translateY(-50%);
+    }
+
+    .troubleshooting details[open] summary::after {
+      content: "−";
+    }
+
+    .troubleshooting p {
+      margin: 0;
+      padding: 0 17px 17px;
+      color: var(--ink-soft);
+      font-size: 14px;
+    }
+
+    .privacy-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(250px, 0.9fr);
+      gap: 24px;
+      padding: 25px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--navy);
+      color: white;
+    }
+
+    .privacy-panel h3 {
+      margin: 0 0 8px;
+      font-size: 21px;
+    }
+
+    .privacy-panel p {
+      margin: 0;
+      color: #dce9ee;
+      font-size: 14px;
+    }
+
+    .privacy-facts {
+      display: grid;
+      gap: 8px;
+    }
+
+    .privacy-facts span {
+      display: block;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.07);
+      font-size: 13px;
+    }
+
+    .site-footer {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 22px 0 40px;
+      color: var(--ink-soft);
+      border-top: 1px solid var(--line);
+      font-size: 12px;
+    }
+
+    .site-footer p {
+      margin: 0;
+    }
+
+    .noscript {
+      padding: 12px;
+      color: #7b4a14;
+      border: 1px solid #e7c796;
+      background: var(--amber-soft);
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 34px;
+      }
+
+      .hero-figure {
+        min-height: 310px;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+
+      .toc {
+        position: static;
+        overflow-x: auto;
+        padding: 14px;
+      }
+
+      .toc-title {
+        margin-bottom: 8px;
+      }
+
+      .toc ol {
+        display: flex;
+        width: max-content;
+      }
+
+      .toc a {
+        display: block;
+        min-width: 132px;
+        padding: 7px 10px;
+      }
+
+      .toc a::before {
+        display: none;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .header-inner,
+      .hero,
+      .layout,
+      .site-footer {
+        width: min(calc(100% - 24px), 1180px);
+      }
+
+      .header-inner {
+        min-height: 64px;
+      }
+
+      .brand-meta {
+        display: none;
+      }
+
+      .language-toggle button {
+        min-width: 58px;
+        min-height: 32px;
+        padding: 4px 8px;
+      }
+
+      .hero {
+        margin-top: 16px;
+        padding: 25px 20px;
+      }
+
+      .hero h1,
+      .hero-lead,
+      .section h2,
+      .section-intro {
+        overflow-wrap: anywhere;
+      }
+
+      .hero-figure {
+        min-height: 240px;
+      }
+
+      .hero-figure::before {
+        width: 230px;
+        height: 230px;
+      }
+
+      .section {
+        margin-bottom: 48px;
+      }
+
+      .section-heading {
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 11px;
+      }
+
+      .section-index {
+        width: 42px;
+        height: 42px;
+      }
+
+      .annotation-row,
+      .tool-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .flow {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-step {
+        min-height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .flow-step:last-child {
+        border-bottom: 0;
+      }
+
+      .flow-step:not(:last-child)::after {
+        top: auto;
+        right: 28px;
+        bottom: -7px;
+        transform: rotate(135deg);
+      }
+
+      .privacy-panel {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+      }
+    }
+
+    @media print {
+      @page {
+        size: A4;
+        margin: 14mm;
+      }
+
+      body {
+        color: #111;
+        background: white;
+        font-size: 10.5pt;
+      }
+
+      .site-header,
+      .toc,
+      .hero-actions,
+      .language-toggle,
+      .site-footer,
+      .skip-link {
+        display: none !important;
+      }
+
+      .hero,
+      .layout,
+      .site-footer {
+        width: 100%;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        margin: 0 0 12mm;
+        padding: 8mm;
+        border-color: #999;
+        box-shadow: none;
+      }
+
+      .layout {
+        display: block;
+        margin: 0;
+      }
+
+      .section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin-bottom: 10mm;
+      }
+
+      .step-list li,
+      .mock-window,
+      .flow,
+      .tool-card,
+      .troubleshooting details,
+      .privacy-panel {
+        box-shadow: none;
+      }
+
+      .privacy-panel {
+        color: #111;
+        background: white;
+      }
+
+      .privacy-panel p,
+      .privacy-facts span {
+        color: #111;
+        border-color: #999;
+        background: white;
+      }
+
+      details {
+        display: block;
+      }
+
+      details > * {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#guide-main" data-zh="跳到指南正文" data-en="Skip to guide content">跳到指南正文</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="4" y="4" width="32" height="32" rx="8" fill="#eef6f8" stroke="#8eb6c5"/>
+          <path d="M11 27V13h8l4 5h6v9H11Z" fill="#226f91"/>
+          <path d="M14 24h12M14 20h5M23 20h3" stroke="white" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        <div class="brand-copy">
+          <span class="brand-title" data-zh="模方面板快捷键助手" data-en="ModelFun Shortcut Tool">模方面板快捷键助手</span>
+          <span class="brand-meta">V1.3.0 · <span data-zh="离线图形用户指南" data-en="Offline visual user guide">离线图形用户指南</span></span>
+        </div>
+      </div>
+
+      <div class="language-toggle" id="languageToggle" role="group" aria-label="Language">
+        <button type="button" data-set-lang="zh-CN" aria-pressed="true">中文</button>
+        <button type="button" data-set-lang="en-US" aria-pressed="false">English</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="guide-main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div>
+        <p class="hero-kicker" data-zh="从识别面板到安全备份" data-en="From panel detection to safe backups">从识别面板到安全备份</p>
+        <h1 id="hero-title" data-zh="把常用操作，固定成可靠的快捷键。" data-en="Turn repeated panel actions into reliable shortcuts.">把常用操作，固定成可靠的快捷键。</h1>
+        <p class="hero-lead" data-zh="这份指南按真实工作流程组织：先完成首次启动，再绑定快捷键，最后学会备份、迁移和排查。" data-en="This guide follows the real workflow: start the app, map shortcuts, then learn backup, migration, and troubleshooting.">这份指南按真实工作流程组织：先完成首次启动，再绑定快捷键，最后学会备份、迁移和排查。</p>
+        <div class="hero-actions">
+          <a class="button-primary" href="#quick-start" data-zh="直接开始" data-en="Start now">直接开始</a>
+          <a class="button-secondary" href="#troubleshooting" data-zh="遇到问题" data-en="Troubleshooting">遇到问题</a>
+        </div>
+      </div>
+
+      <figure class="hero-figure" aria-labelledby="map-caption">
+        <svg class="panel-map" viewBox="0 0 520 370" role="img" aria-labelledby="map-caption map-desc">
+          <title id="map-caption" data-zh="四种面板与快捷键助手的连接示意" data-en="Connection map between four panels and the shortcut tool">四种面板与快捷键助手的连接示意</title>
+          <desc id="map-desc" data-zh="道路置平、表面置平、指定置平和补洞通过快捷键连接到中心工具。" data-en="Road Leveling, Surface Leveling, Specified Leveling, and Hole Patching connect to the central tool through shortcuts.">道路置平、表面置平、指定置平和补洞通过快捷键连接到中心工具。</desc>
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#60a0b5"/>
+            </marker>
+          </defs>
+          <path d="M120 95 C190 95 185 150 235 165" fill="none" stroke="#60a0b5" stroke-width="2" marker-end="url(#arrow)"/>
+          <path d="M400 95 C330 95 335 150 285 165" fill="none" stroke="#60a0b5" stroke-width="2" marker-end="url(#arrow)"/>
+          <path d="M120 280 C190 280 185 225 235 205" fill="none" stroke="#60a0b5" stroke-width="2" marker-end="url(#arrow)"/>
+          <path d="M400 280 C330 280 335 225 285 205" fill="none" stroke="#60a0b5" stroke-width="2" marker-end="url(#arrow)"/>
+
+          <rect x="138" y="138" width="244" height="94" rx="18" fill="#123a52"/>
+          <rect x="150" y="150" width="220" height="70" rx="12" fill="#ffffff" opacity="0.08"/>
+          <text x="260" y="180" text-anchor="middle" fill="#ffffff" font-family="Microsoft YaHei UI, Segoe UI, sans-serif" font-size="17" font-weight="700" data-zh="快捷键助手" data-en="Shortcut Tool">快捷键助手</text>
+          <text x="260" y="202" text-anchor="middle" fill="#cce4ec" font-family="Cascadia Mono, Consolas, monospace" font-size="11">Ctrl + Alt + Key</text>
+
+          <g>
+            <rect x="35" y="55" width="170" height="76" rx="13" fill="#ffffff" stroke="#a8c0cb"/>
+            <rect x="48" y="68" width="29" height="29" rx="8" fill="#dcecf2"/>
+            <path d="M55 84h15M62.5 76.5v15" stroke="#226f91" stroke-width="1.8" stroke-linecap="round"/>
+            <text x="88" y="82" fill="#173247" font-family="Microsoft YaHei UI, Segoe UI, sans-serif" font-size="13" font-weight="700" data-zh="道路置平" data-en="Road Leveling">道路置平</text>
+            <text x="88" y="102" fill="#607887" font-family="Cascadia Mono, Consolas, monospace" font-size="10">Ctrl+Alt+1…5</text>
+          </g>
+
+          <g>
+            <rect x="315" y="55" width="170" height="76" rx="13" fill="#ffffff" stroke="#a8c0cb"/>
+            <rect x="328" y="68" width="29" height="29" rx="8" fill="#dcecf2"/>
+            <path d="M334 82h11l4 5h6" fill="none" stroke="#226f91" stroke-width="1.8" stroke-linecap="round"/>
+            <text x="368" y="82" fill="#173247" font-family="Microsoft YaHei UI, Segoe UI, sans-serif" font-size="13" font-weight="700" data-zh="表面置平" data-en="Surface Leveling">表面置平</text>
+            <text x="368" y="102" fill="#607887" font-family="Cascadia Mono, Consolas, monospace" font-size="10">Ctrl+Alt+1…6</text>
+          </g>
+
+          <g>
+            <rect x="35" y="239" width="170" height="76" rx="13" fill="#ffffff" stroke="#a8c0cb"/>
+            <rect x="48" y="252" width="29" height="29" rx="8" fill="#dcecf2"/>
+            <path d="M54 274l5-14 5 14 5-14 5 14" fill="none" stroke="#226f91" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="88" y="266" fill="#173247" font-family="Microsoft YaHei UI, Segoe UI, sans-serif" font-size="13" font-weight="700" data-zh="指定置平" data-en="Specified Leveling">指定置平</text>
+            <text x="88" y="286" fill="#607887" font-family="Cascadia Mono, Consolas, monospace" font-size="10">Ctrl+Alt+1…10</text>
+          </g>
+
+          <g>
+            <rect x="315" y="239" width="170" height="76" rx="13" fill="#ffffff" stroke="#a8c0cb"/>
+            <rect x="328" y="252" width="29" height="29" rx="8" fill="#dcecf2"/>
+            <circle cx="342.5" cy="266.5" r="8" fill="none" stroke="#226f91" stroke-width="1.8"/>
+            <path d="M342.5 261v11M337 266.5h11" stroke="#226f91" stroke-width="1.5"/>
+            <text x="368" y="266" fill="#173247" font-family="Microsoft YaHei UI, Segoe UI, sans-serif" font-size="13" font-weight="700" data-zh="补洞" data-en="Hole Patching">补洞</text>
+            <text x="368" y="286" fill="#607887" font-family="Cascadia Mono, Consolas, monospace" font-size="10">Ctrl+Alt+1…10</text>
+          </g>
+        </svg>
+      </figure>
+    </section>
+
+    <div class="layout">
+      <nav class="toc" aria-label="Guide contents">
+        <p class="toc-title" data-zh="指南目录" data-en="Guide contents">指南目录</p>
+        <ol>
+          <li><a href="#quick-start" data-zh="快速开始" data-en="Quick start">快速开始</a></li>
+          <li><a href="#interface" data-zh="认识主界面" data-en="Main interface">认识主界面</a></li>
+          <li><a href="#language" data-zh="切换语言" data-en="Change language">切换语言</a></li>
+          <li><a href="#shortcuts" data-zh="编辑快捷键" data-en="Edit shortcuts">编辑快捷键</a></li>
+          <li><a href="#backup" data-zh="执行备份" data-en="Run a backup">执行备份</a></li>
+          <li><a href="#config-tools" data-zh="配置管理" data-en="Config tools">配置管理</a></li>
+          <li><a href="#dpi" data-zh="分辨率与缩放" data-en="DPI and scaling">分辨率与缩放</a></li>
+          <li><a href="#troubleshooting" data-zh="故障排查" data-en="Troubleshooting">故障排查</a></li>
+          <li><a href="#privacy" data-zh="数据与许可" data-en="Data and license">数据与许可</a></li>
+        </ol>
+      </nav>
+
+      <article class="guide">
+        <section class="section" id="quick-start">
+          <div class="section-heading">
+            <span class="section-index">01</span>
+            <div>
+              <h2 data-zh="快速开始" data-en="Quick start">快速开始</h2>
+              <p class="section-intro" data-zh="第一次使用只需要四步。先把安全操作跑通，再开始高频使用。" data-en="The first run takes four steps. Verify a safe action before relying on shortcuts during production work.">第一次使用只需要四步。先把安全操作跑通，再开始高频使用。</p>
+            </div>
+          </div>
+
+          <ol class="step-list">
+            <li>
+              <div>
+                <strong data-zh="打开模方和受支持的面板" data-en="Open ModelFun and a supported panel">打开模方和受支持的面板</strong>
+                <p data-zh="显示道路置平、表面置平、指定置平或补洞中的任意一个。" data-en="Show Road Leveling, Surface Leveling, Specified Leveling, or Hole Patching.">显示道路置平、表面置平、指定置平或补洞中的任意一个。</p>
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong data-zh="启动 RoadLevelHotkeys.exe" data-en="Start RoadLevelHotkeys.exe">启动 RoadLevelHotkeys.exe</strong>
+                <p data-zh="Windows 出现 UAC 提示时选择“是”。模方通常以管理员权限运行，助手也需要同级权限。" data-en="Choose Yes when Windows shows the UAC prompt. ModelFun normally runs elevated, so the tool needs matching permission.">Windows 出现 UAC 提示时选择“是”。模方通常以管理员权限运行，助手也需要同级权限。</p>
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong data-zh="确认自动识别结果" data-en="Confirm automatic detection">确认自动识别结果</strong>
+                <p data-zh="状态行会显示当前面板；表格只列出该面板可用的按钮。切换面板后会自动刷新。" data-en="The status line shows the active panel. The table lists only that panel’s buttons and refreshes after panel changes.">状态行会显示当前面板；表格只列出该面板可用的按钮。切换面板后会自动刷新。</p>
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong data-zh="先测试安全快捷键" data-en="Test a safe shortcut first">先测试安全快捷键</strong>
+                <p data-zh="建议先在工程副本中试一次撤销/重做或备份，确认窗口坐标和权限都正确。" data-en="Try Undo, Redo, or Backup on a project copy to verify coordinates and permissions before production use.">建议先在工程副本中试一次撤销/重做或备份，确认窗口坐标和权限都正确。</p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section class="section" id="interface">
+          <div class="section-heading">
+            <span class="section-index">02</span>
+            <div>
+              <h2 data-zh="认识主界面" data-en="Main interface">认识主界面</h2>
+              <p class="section-intro" data-zh="主窗口分成语言、状态、快捷键表格和操作区四部分。" data-en="The main window has four regions: language, status, shortcut table, and actions.">主窗口分成语言、状态、快捷键表格和操作区四部分。</p>
+            </div>
+          </div>
+
+          <div class="mock-window" role="img" aria-label="Main window diagram">
+            <div class="mock-titlebar">
+              <span data-zh="模方面板快捷键助手 V1.3.0" data-en="ModelFun Shortcut Tool V1.3.0">模方面板快捷键助手 V1.3.0</span>
+              <span class="mock-window-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+            </div>
+            <div class="mock-body">
+              <div class="mock-top">
+                <div class="mock-heading">
+                  <strong data-zh="模方面板 · 自动识别快捷键" data-en="ModelFun · Automatic shortcuts">模方面板 · 自动识别快捷键</strong>
+                  <span data-zh="作者：shijye｜自动识别四类置平/补洞面板" data-en="Author: shijye | Four supported panel types">作者：shijye｜自动识别四类置平/补洞面板</span>
+                </div>
+                <div class="mock-language" data-zh="中文 ▾" data-en="English ▾">中文 ▾</div>
+              </div>
+              <div class="mock-status" data-zh="等待打开：道路置平、表面置平、指定置平或补洞。" data-en="Waiting for a supported panel.">等待打开：道路置平、表面置平、指定置平或补洞。</div>
+              <div class="mock-table">
+                <div class="mock-row header">
+                  <span data-zh="动作 / 面板按钮" data-en="Action / Button">动作 / 面板按钮</span>
+                  <span data-zh="键盘快捷键" data-en="Keyboard">键盘快捷键</span>
+                  <span data-zh="鼠标快捷键" data-en="Mouse">鼠标快捷键</span>
+                  <span data-zh="提示" data-en="Status">提示</span>
+                </div>
+                <div class="mock-row data">
+                  <span data-zh="备份当前工程瓦片" data-en="Backup Project Tiles">备份当前工程瓦片</span>
+                  <span>F11</span>
+                  <span data-zh="无" data-en="None">无</span>
+                  <span data-zh="正常" data-en="OK">正常</span>
+                </div>
+              </div>
+              <div class="mock-buttons">
+                <span data-zh="立即识别" data-en="Detect">立即识别</span>
+                <span data-zh="修改快捷键" data-en="Edit">修改快捷键</span>
+                <span data-zh="恢复默认" data-en="Reset">恢复默认</span>
+                <span data-zh="载入配置" data-en="Reload">载入配置</span>
+                <span data-zh="打开配置" data-en="Open">打开配置</span>
+                <span data-zh="配置管理" data-en="Config">配置管理</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="annotation-row">
+            <div class="annotation">
+              <strong data-zh="语言" data-en="Language">语言</strong>
+              <span data-zh="即时切换中英文，选择会自动保存。" data-en="Switch Chinese and English immediately; the choice is saved.">即时切换中英文，选择会自动保存。</span>
+            </div>
+            <div class="annotation">
+              <strong data-zh="状态行" data-en="Status line">状态行</strong>
+              <span data-zh="告诉你当前在等待、识别还是快捷键注册失败。" data-en="Shows whether the tool is waiting, detected, or unable to register a shortcut.">告诉你当前在等待、识别还是快捷键注册失败。</span>
+            </div>
+            <div class="annotation">
+              <strong data-zh="操作区" data-en="Actions">操作区</strong>
+              <span data-zh="配置管理集中处理导入、导出和恢复备份。" data-en="Config tools groups import, export, and backup recovery.">配置管理集中处理导入、导出和恢复备份。</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="language">
+          <div class="section-heading">
+            <span class="section-index">03</span>
+            <div>
+              <h2 data-zh="切换中文与 English" data-en="Switch between Chinese and English">切换中文与 English</h2>
+              <p class="section-intro" data-zh="语言选项位于主窗口右上角。切换后立即刷新，不会改变快捷键。" data-en="The language selector is at the top right. Changes apply immediately and never modify shortcuts.">语言选项位于主窗口右上角。切换后立即刷新，不会改变快捷键。</p>
+            </div>
+          </div>
+          <ol class="step-list">
+            <li>
+              <div>
+                <strong data-zh="选择“中文”或“English”" data-en="Choose Chinese or English">选择“中文”或“English”</strong>
+                <p data-zh="标题、状态、表格、对话框、关于窗口和版本历史会一起切换。" data-en="The title, status, table, dialogs, About window, and version history all switch together.">标题、状态、表格、对话框、关于窗口和版本历史会一起切换。</p>
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong data-zh="设置自动保存" data-en="The choice is saved automatically">设置自动保存</strong>
+                <p data-zh="下一次启动继续使用上次语言。旧配置会自动迁移，不会丢失快捷键。" data-en="The next launch restores the same language. Older configurations migrate without losing shortcuts.">下一次启动继续使用上次语言。旧配置会自动迁移，不会丢失快捷键。</p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section class="section" id="shortcuts">
+          <div class="section-heading">
+            <span class="section-index">04</span>
+            <div>
+              <h2 data-zh="编辑快捷键" data-en="Edit shortcuts">编辑快捷键</h2>
+              <p class="section-intro" data-zh="双击表格行，或选中后点“修改快捷键”。四个面板各自保存，互不干扰。" data-en="Double-click a row or select it and choose Edit. Each panel stores its own bindings independently.">双击表格行，或选中后点“修改快捷键”。四个面板各自保存，互不干扰。</p>
+            </div>
+          </div>
+
+          <ol class="step-list">
+            <li>
+              <div>
+                <strong data-zh="按下新的键盘组合" data-en="Press a new key combination">按下新的键盘组合</strong>
+                <p>
+                  <span data-zh="点击输入框后直接按键，例如" data-en="Click the capture box and press keys, for example">点击输入框后直接按键，例如</span>
+                  <span class="key">Ctrl</span> + <span class="key">Alt</span> + <span class="key">F6</span><span data-zh="。" data-en=".">。</span>
+                </p>
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong data-zh="选择鼠标侧键" data-en="Choose a mouse side button">选择鼠标侧键</strong>
+                <p data-zh="可选 Side 1、Side 2 或 None。键盘和鼠标至少要绑定一个。" data-en="Choose Side 1, Side 2, or None. Bind at least one keyboard or mouse shortcut.">可选 Side 1、Side 2 或 None。键盘和鼠标至少要绑定一个。</p>
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong data-zh="处理冲突提示" data-en="Review conflict warnings">处理冲突提示</strong>
+                <p data-zh="助手内部重复不能保存；与模方原版快捷键冲突时会显示原功能，并允许你确认后继续。" data-en="Internal duplicates cannot be saved. Original ModelFun conflicts show the affected function and allow an explicit override.">助手内部重复不能保存；与模方原版快捷键冲突时会显示原功能，并允许你确认后继续。</p>
+              </div>
+            </li>
+          </ol>
+
+          <div class="callout">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3 22 20H2L12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M12 9v5M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <div>
+              <strong data-zh="不要把高风险动作绑到单键" data-en="Avoid single-key bindings for risky actions">不要把高风险动作绑到单键</strong>
+              <p data-zh="至少使用两个修饰键，并先在工程副本中验证。助手会拦截面板内冲突，但面板关闭时无法阻止模方原功能。" data-en="Use at least two modifiers and verify on a project copy. The tool blocks panel conflicts, but cannot stop ModelFun behavior when no panel is open.">至少使用两个修饰键，并先在工程副本中验证。助手会拦截面板内冲突，但面板关闭时无法阻止模方原功能。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="backup">
+          <div class="section-heading">
+            <span class="section-index">05</span>
+            <div>
+              <h2 data-zh="执行备份" data-en="Run a backup">执行备份</h2>
+              <p class="section-intro" data-zh="通用备份快捷键会按固定顺序完成四步，并在结束后恢复鼠标位置。" data-en="The global backup shortcut runs four steps and restores the mouse position afterward.">通用备份快捷键会按固定顺序完成四步，并在结束后恢复鼠标位置。</p>
+            </div>
+          </div>
+
+          <div class="flow" aria-label="Backup workflow">
+            <div class="flow-step">
+              <span class="flow-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M7 18a4 4 0 0 1-.4-7.98A6 6 0 0 1 18 9a4.5 4.5 0 0 1-1 8.9H7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              </span>
+              <strong data-zh="按下备份快捷键" data-en="Press Backup">按下备份快捷键</strong>
+              <p data-zh="默认 Ctrl+Alt+B，也可以自行修改。" data-en="Ctrl+Alt+B by default; customizable.">默认 Ctrl+Alt+B，也可以自行修改。</p>
+            </div>
+            <div class="flow-step">
+              <span class="flow-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 9h10M7 13h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </span>
+              <strong data-zh="打开备份窗口" data-en="Open Backup">打开备份窗口</strong>
+              <p data-zh="助手点击模方工具栏的云朵备份按钮。" data-en="The tool clicks ModelFun’s cloud backup button.">助手点击模方工具栏的云朵备份按钮。</p>
+            </div>
+            <div class="flow-step">
+              <span class="flow-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="m7 12 3 3 7-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <strong data-zh="全选" data-en="Select all">全选</strong>
+              <p data-zh="在备份列表中选中全部工程瓦片。" data-en="Select all project tiles in the list.">在备份列表中选中全部工程瓦片。</p>
+            </div>
+            <div class="flow-step">
+              <span class="flow-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M5 4h11l3 3v13H5V4Z" stroke="currentColor" stroke-width="1.8"/><path d="M8 4v5h8V4M8 15h8" stroke="currentColor" stroke-width="1.8"/></svg>
+              </span>
+              <strong data-zh="立即备份" data-en="Backup now">立即备份</strong>
+              <p data-zh="最后点击“立即备份”，完成后恢复鼠标。" data-en="Click Backup Now; the original mouse position is restored afterward.">最后点击“立即备份”，完成后恢复鼠标。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="config-tools">
+          <div class="section-heading">
+            <span class="section-index">06</span>
+            <div>
+              <h2 data-zh="配置管理" data-en="Config tools">配置管理</h2>
+              <p class="section-intro" data-zh="配置管理菜单负责导出、导入和恢复。每次写入前都会保留上一版配置。" data-en="Config tools handles export, import, and recovery. Every write keeps the previous configuration first.">配置管理菜单负责导出、导入和恢复。每次写入前都会保留上一版配置。</p>
+            </div>
+          </div>
+
+          <div class="tool-grid">
+            <div class="tool-card">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <strong data-zh="导出配置" data-en="Export config">导出配置</strong>
+              <p data-zh="将快捷键和语言保存成 JSON，适合迁移到另一台电脑。" data-en="Save shortcuts and language to JSON for another computer.">将快捷键和语言保存成 JSON，适合迁移到另一台电脑。</p>
+            </div>
+            <div class="tool-card">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V3m0 0L8 7m4-4 4 4M5 17v3h14v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <strong data-zh="导入配置" data-en="Import config">导入配置</strong>
+              <p data-zh="先校验 JSON，再自动备份当前配置并载入新设置。" data-en="Validate JSON, back up the current config, then load the new settings.">先校验 JSON，再自动备份当前配置并载入新设置。</p>
+            </div>
+            <div class="tool-card">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9V4h5M20 15v5h-5M5 4l5 5m9 10-5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <strong data-zh="恢复最近备份" data-en="Restore latest backup">恢复最近备份</strong>
+              <p data-zh="默认保留最近 20 份；配置文件损坏时启动也会尝试自动恢复。" data-en="Keeps the latest 20 by default and attempts automatic recovery if config is damaged.">默认保留最近 20 份；配置文件损坏时启动也会尝试自动恢复。</p>
+            </div>
+          </div>
+
+          <div class="callout">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 3h9l4 4v14H6V3Z" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M9 12h7M9 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <div>
+              <strong data-zh="配置只保存在本机" data-en="Configuration stays on this computer">配置只保存在本机</strong>
+              <p data-zh="config.json 和 config-backups 不上传网络，不包含工程内容，也没有遥测。" data-en="config.json and config-backups are never uploaded and contain no project data or telemetry.">config.json 和 config-backups 不上传网络，不包含工程内容，也没有遥测。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="dpi">
+          <div class="section-heading">
+            <span class="section-index">07</span>
+            <div>
+              <h2 data-zh="分辨率与缩放" data-en="DPI and scaling">分辨率与缩放</h2>
+              <p class="section-intro" data-zh="主窗口使用 PerMonitorV2，在不同缩放比显示器之间移动时会重新计算布局。" data-en="The main window uses PerMonitorV2 and recalculates layout when moved between displays with different scaling.">主窗口使用 PerMonitorV2，在不同缩放比显示器之间移动时会重新计算布局。</p>
+            </div>
+          </div>
+          <ol class="step-list">
+            <li>
+              <div>
+                <strong data-zh="已验证 100% 至 250% 缩放" data-en="Tested from 100% to 250% scaling">已验证 100% 至 250% 缩放</strong>
+                <p data-zh="覆盖 1080p、1440p、4K 和超宽屏，窗口会限制在当前工作区。" data-en="Coverage includes 1080p, 1440p, 4K, and ultrawide; windows stay inside the current work area.">覆盖 1080p、1440p、4K 和超宽屏，窗口会限制在当前工作区。</p>
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong data-zh="面板按钮按真实窗口缩放" data-en="Panel coordinates follow the real window">面板按钮按真实窗口缩放</strong>
+                <p data-zh="宽高比例严重失真时会拒绝点击，避免高 DPI 下误点。" data-en="Clicks are rejected if aspect ratio becomes unreliable, preventing high-DPI misclicks.">宽高比例严重失真时会拒绝点击，避免高 DPI 下误点。</p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section class="section" id="troubleshooting">
+          <div class="section-heading">
+            <span class="section-index">08</span>
+            <div>
+              <h2 data-zh="故障排查" data-en="Troubleshooting">故障排查</h2>
+              <p class="section-intro" data-zh="先看状态行，再按下面顺序排除权限、前台窗口和识别问题。" data-en="Read the status line, then check permissions, foreground state, and panel detection in this order.">先看状态行，再按下面顺序排除权限、前台窗口和识别问题。</p>
+            </div>
+          </div>
+
+          <div class="troubleshooting">
+            <details>
+              <summary data-zh="按快捷键没有反应" data-en="Shortcuts do nothing">按快捷键没有反应</summary>
+              <p data-zh="确认模方在前台、受支持面板已打开、工具底部显示已启用。若状态显示注册失败，请换一个组合键。" data-en="Confirm ModelFun is active, a supported panel is open, and the status says hotkeys are enabled. If registration failed, choose another combination.">确认模方在前台、受支持面板已打开、工具底部显示已启用。若状态显示注册失败，请换一个组合键。</p>
+            </details>
+            <details>
+              <summary data-zh="点击位置偏了" data-en="Clicks land in the wrong place">点击位置偏了</summary>
+              <p data-zh="先关闭并重新打开该面板，再点“立即识别”。如果面板比例异常，工具会拒绝点击，这是保护行为。" data-en="Close and reopen the panel, then choose Detect. If the panel aspect ratio is abnormal, the tool refuses to click as a safety measure.">先关闭并重新打开该面板，再点“立即识别”。如果面板比例异常，工具会拒绝点击，这是保护行为。</p>
+            </details>
+            <details>
+              <summary data-zh="第二次启动没有出现新窗口" data-en="A second launch shows no new window">第二次启动没有出现新窗口</summary>
+              <p data-zh="这是单实例保护。程序会激活已在运行的窗口，避免两套快捷键互相抢占。" data-en="This is single-instance protection. The app activates the existing window so two hotkey sets cannot conflict.">这是单实例保护。程序会激活已在运行的窗口，避免两套快捷键互相抢占。</p>
+            </details>
+            <details>
+              <summary data-zh="配置损坏或导入失败" data-en="Configuration is damaged or import fails">配置损坏或导入失败</summary>
+              <p data-zh="打开“配置管理 → 恢复最近备份”。如果导入失败，文件不是有效 JSON 或结构不符合要求，当前配置不会被覆盖。" data-en="Use Config tools → Restore latest backup. A failed import means the file is invalid or incompatible; the current configuration remains unchanged.">打开“配置管理 → 恢复最近备份”。如果导入失败，文件不是有效 JSON 或结构不符合要求，当前配置不会被覆盖。</p>
+            </details>
+            <details>
+              <summary data-zh="跨显示器后按钮被裁切" data-en="Buttons are clipped after moving monitors">跨显示器后按钮被裁切</summary>
+              <p data-zh="确认使用的是 V1.3.0，并让启动器优先使用 Windows PowerShell 5.1。再把窗口拖到另一台显示器观察状态行和底部按钮。" data-en="Use V1.3.0 and let the launcher prefer Windows PowerShell 5.1. Move the window to another monitor and check the status line and bottom buttons.">确认使用的是 V1.3.0，并让启动器优先使用 Windows PowerShell 5.1。再把窗口拖到另一台显示器观察状态行和底部按钮。</p>
+            </details>
+          </div>
+        </section>
+
+        <section class="section" id="privacy">
+          <div class="section-heading">
+            <span class="section-index">09</span>
+            <div>
+              <h2 data-zh="数据与许可" data-en="Data and license">数据与许可</h2>
+              <p class="section-intro" data-zh="本工具不包含账号、遥测和云同步。快捷键配置只保存在本机。" data-en="The tool has no accounts, telemetry, or cloud sync. Shortcut settings stay on this computer.">本工具不包含账号、遥测和云同步。快捷键配置只保存在本机。</p>
+            </div>
+          </div>
+          <div class="privacy-panel">
+            <div>
+              <h3 data-zh="GPL-3.0 完全开源" data-en="Fully open source under GPL-3.0">GPL-3.0 完全开源</h3>
+              <p data-zh="作者 shijye。允许运行、研究、修改、再分发和商业使用；衍生发行必须遵守 GPL-3.0，提供完整对应源码并保留作者署名。" data-en="Author: shijye. Run, study, modify, redistribute, and use commercially. Derivatives must comply with GPL-3.0, include corresponding source, and preserve author credit.">作者 shijye。允许运行、研究、修改、再分发和商业使用；衍生发行必须遵守 GPL-3.0，提供完整对应源码并保留作者署名。</p>
+            </div>
+            <div class="privacy-facts">
+              <span data-zh="不上传 config.json" data-en="config.json is never uploaded">不上传 config.json</span>
+              <span data-zh="不保存工程内容" data-en="No project content is stored">不保存工程内容</span>
+              <span data-zh="无遥测、无账号、无云同步" data-en="No telemetry, accounts, or cloud sync">无遥测、无账号、无云同步</span>
+            </div>
+          </div>
+        </section>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p data-zh="模方面板快捷键助手 V1.3.0 · 作者 shijye · 本指南可离线打开和打印。" data-en="ModelFun Shortcut Tool V1.3.0 · Author shijye · This guide works offline and can be printed.">模方面板快捷键助手 V1.3.0 · 作者 shijye · 本指南可离线打开和打印。</p>
+  </footer>
+
+  <noscript>
+    <div class="noscript" data-zh="JavaScript 已关闭：中文内容仍可阅读，语言切换不可用。" data-en="JavaScript is disabled: Chinese content remains readable, but language switching is unavailable.">JavaScript 已关闭：中文内容仍可阅读，语言切换不可用。</div>
+  </noscript>
+
+  <script>
+    (() => {
+      const storageKey = "modelfun-guide-language";
+      const buttons = Array.from(document.querySelectorAll("[data-set-lang]"));
+      const localized = Array.from(document.querySelectorAll("[data-zh][data-en]"));
+      const requested = new URLSearchParams(window.location.search).get("lang")
+        || window.location.hash.replace(/^#lang=/, "")
+        || localStorage.getItem(storageKey)
+        || ((navigator.language || "").toLowerCase().startsWith("zh") ? "zh-CN" : "en-US");
+
+      function normalizeLanguage(value) {
+        return String(value || "").toLowerCase().startsWith("en") ? "en-US" : "zh-CN";
+      }
+
+      function applyLanguage(value, persist) {
+        const language = normalizeLanguage(value);
+        const property = language === "en-US" ? "en" : "zh";
+        document.documentElement.lang = language;
+        document.documentElement.dataset.language = language;
+        localized.forEach((element) => {
+          element.textContent = element.dataset[property] || element.textContent;
+        });
+        buttons.forEach((button) => {
+          button.setAttribute("aria-pressed", String(button.dataset.setLang === language));
+        });
+        if (persist) {
+          localStorage.setItem(storageKey, language);
+        }
+      }
+
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => applyLanguage(button.dataset.setLang, true));
+      });
+
+      window.addEventListener("beforeprint", () => {
+        document.querySelectorAll("details").forEach((details) => {
+          details.open = true;
+        });
+      });
+
+      applyLanguage(requested, false);
+    })();
+  </script>
+</body>
+</html>

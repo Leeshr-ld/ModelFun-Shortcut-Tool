@@ -38,6 +38,11 @@ foreach ($size in @(
     Assert-True ($metrics.HintTop -ge $metrics.ButtonTop + $metrics.ButtonPanelHeight) '按钮区与底部提示重叠'
     Assert-True ($metrics.HintTop + $metrics.HintHeight -le $size.Height) '底部提示超出窗口'
     Assert-True ($metrics.GridHeight -ge 100) '表格高度过小'
+    Assert-True ($metrics.LanguageSelectorWidth -ge 120) '语言选择框宽度不足'
+    Assert-True ($metrics.LanguageSelectorTop -ge $metrics.TitleTop) '语言选择框位置过高'
+    Assert-True ($metrics.LanguageSelectorTop + $metrics.LanguageSelectorHeight -le $metrics.SummaryTop) '语言选择框挤压摘要区'
+    Assert-True ($metrics.LanguageSelectorLeft + $metrics.LanguageSelectorWidth -le 20 + $metrics.ContentWidth) '语言选择框超出内容区'
+    Assert-True ($metrics.TitleWidth -ge 320) '标题可用宽度不足'
 }
 
 $dipCases = @(

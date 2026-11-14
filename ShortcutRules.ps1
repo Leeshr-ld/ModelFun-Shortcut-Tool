@@ -214,7 +214,8 @@ function New-DefaultShortcutConfig([string]$TargetTitle) {
     }
 
     return [pscustomobject]@{
-        version = 4
+        version = 5
+        language = 'zh-CN'
         targetTitle = $TargetTitle
         commonBindings = $commonBindings
         panelBindings = [pscustomobject]$panelMap
@@ -227,7 +228,7 @@ function ConvertTo-V4ShortcutConfig($Config) {
     }
 
     $targetTitle = if ($Config.PSObject.Properties['targetTitle']) { [string]$Config.targetTitle } else { '模方ModelFun' }
-    if ([int]$Config.version -eq 4 -and
+    if ([int]$Config.version -ge 4 -and
         $Config.PSObject.Properties['commonBindings'] -and
         $Config.PSObject.Properties['panelBindings']) {
         $defaults = New-DefaultShortcutConfig -TargetTitle $targetTitle
@@ -268,6 +269,29 @@ function ConvertTo-V4ShortcutConfig($Config) {
     }
 
     return $migrated
+}
+
+function ConvertTo-V5ShortcutConfig($Config) {
+    $converted = ConvertTo-V4ShortcutConfig -Config $Config
+    if (-not $converted.PSObject.Properties['language'] -or
+        [string]::IsNullOrWhiteSpace([string]$converted.language)) {
+        $converted | Add-Member -NotePropertyName language -NotePropertyValue 'zh-CN' -Force
+    }
+    $converted.version = 5
+    return $converted
+}
+
+function Set-ConfigLanguage($Config, [string]$Language) {
+    if ($Language -notin @('zh-CN', 'en-US')) {
+        throw "不支持的语言：$Language"
+    }
+    if ($Config.PSObject.Properties['language']) {
+        $Config.language = $Language
+    }
+    else {
+        $Config | Add-Member -NotePropertyName language -NotePropertyValue $Language
+    }
+    return $Config
 }
 
 function Get-PanelBindings($Config, [string]$PanelTitle) {
@@ -340,5 +364,7 @@ function Find-GlobalBackupConflict {
 
 function Reset-ShortcutBindings($Config) {
     $targetTitle = if ($Config.PSObject.Properties['targetTitle']) { [string]$Config.targetTitle } else { '模方ModelFun' }
-    return New-DefaultShortcutConfig -TargetTitle $targetTitle
+    $language = if ($Config.PSObject.Properties['language']) { [string]$Config.language } else { 'zh-CN' }
+    $reset = New-DefaultShortcutConfig -TargetTitle $targetTitle
+    return Set-ConfigLanguage -Config $reset -Language $language
 }

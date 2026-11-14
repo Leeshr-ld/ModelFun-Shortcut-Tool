@@ -1,10 +1,37 @@
 {
-  "version": "V1.2.0",
+  "version": "V1.3.0",
   "author": "shijye",
   "license": "GPL-3.0-only",
   "copyright": "Copyright (C) 2026 shijye. All rights reserved.",
   "licenseNotice": "本软件采用 GNU General Public License v3.0（GPL-3.0）完全开源。你可以运行、研究、修改和再分发本软件，也可以用于商业用途；分发修改版时必须遵守 GPL-3.0，提供完整对应源码并保留许可证和作者署名。",
+  "licenseNoticeEn": "This software is fully open source under GNU GPL v3.0. You may run, study, modify, redistribute, and use it commercially. Modified distributions must comply with GPL-3.0, include the complete corresponding source code, and preserve the license and author credit.",
   "history": [
+    {
+      "version": "V1.3.0",
+      "date": "2026-11-14",
+      "changes": [
+        "新增完整中英文界面，可通过主窗口“语言 / Language”选项即时切换；选择会保存并在下次启动时恢复。",
+        "快捷键编辑器、状态提示、冲突信息、关于窗口、版本历史和错误信息均支持中英文。",
+        "新增单实例保护：重复启动不会注册第二套快捷键，而是直接激活已经运行的窗口。",
+        "新增配置自动备份与恢复：每次保存前保留旧配置，默认最多保留20份，可从软件内恢复最近备份。",
+        "新增配置导入和导出，方便备份、迁移到新电脑或在其他目录复用快捷键设置。",
+        "配置格式升级为V5；V4及更早配置会自动迁移，原有快捷键和作者信息不丢失。",
+        "主窗口增加“配置管理”菜单和语言选择框，并适配中英文长度及不同DPI布局。",
+        "主窗口新增“使用指南”按钮，内置可离线打开、可打印的中英文图形用户指南。",
+        "扩充中英文资源、配置存储、单实例、V5迁移、双语启动和发布包自动测试。"
+      ],
+      "changesEn": [
+        "Added a complete Chinese/English interface with an immediate language selector in the main window; the choice is saved and restored on the next launch.",
+        "The shortcut editor, status messages, conflict details, About window, version history, and error messages now support both languages.",
+        "Added single-instance protection: launching the app again activates the existing window instead of registering a second set of hotkeys.",
+        "Added automatic configuration backup and recovery: the previous configuration is saved before each write, up to 20 backups are retained, and the latest backup can be restored in-app.",
+        "Added configuration import and export for backups, moving to another computer, or reusing shortcut settings elsewhere.",
+        "Upgraded the configuration format to V5. V4 and older configurations migrate automatically without losing existing shortcuts or author information.",
+        "Added a Config Tools menu and language selector to the main window, with layouts tested for both languages and multiple DPI settings.",
+        "Added a User Guide button that opens a bundled, printable, bilingual visual guide without network access.",
+        "Expanded automated tests for bilingual resources, configuration storage, single-instance behavior, V5 migration, bilingual startup, and release contents."
+      ]
+    },
     {
       "version": "V1.2.0",
       "date": "2026-11-14",
@@ -18,6 +45,17 @@
         "面板按钮按实际窗口宽高缩放；宽高比例严重失真时拒绝点击，避免高DPI下误点。",
         "修复Windows PowerShell 5.1严格模式下空快捷键冲突列表导致的“找不到属性Count”启动错误。",
         "扩充独立面板、配置迁移、DPI和分辨率自动测试。"
+      ],
+      "changesEn": [
+        "Shortcuts for Road Leveling, Surface Leveling, Specified Leveling, and Hole Patching are stored independently, so changing one panel does not affect the others.",
+        "Different panels may reuse the same shortcut; duplicates within one panel and conflicts with the global backup shortcut are still blocked.",
+        "Legacy V1.1 shared bindings migrate automatically to the four independent panels without losing keyboard or mouse bindings.",
+        "Added support for 100%, 125%, 150%, 175%, 200%, and 250% scaling, plus 1080p, 1440p, 4K, and ultrawide layouts.",
+        "The launcher now prefers Windows PowerShell 5.1 and enables PerMonitorV2 before creating windows, fixing clipped controls and bottom buttons when moving across displays with different scale factors.",
+        "Added cross-monitor DPI handling so the main window, shortcut editor, About window, and prompt windows stay inside the current work area.",
+        "Panel buttons follow the actual panel width and height; severe aspect-ratio distortion blocks clicks to prevent high-DPI misclicks.",
+        "Fixed the startup error that reported a missing Count property when Windows PowerShell 5.1 processed an empty shortcut conflict list under strict mode.",
+        "Expanded automated tests for independent panels, configuration migration, DPI, and resolution handling."
       ]
     },
     {
@@ -32,6 +70,16 @@
         "界面改为随窗口自适应，修复文字放大和遮挡；新增版本与版权说明。",
         "修复快捷键消息回调、管理员权限和冲突列表崩溃问题。",
         "改用GPL-3.0完全开源，允许研究、修改、再分发和商业使用，同时要求衍生发行继续开源并保留作者署名。"
+      ],
+      "changesEn": [
+        "Added a global backup shortcut that runs Open Backup, Select All, and Backup Now.",
+        "Added visual shortcut editing, duplicate detection, and warnings for conflicts with original ModelFun shortcuts.",
+        "Added one-click restoration of all default shortcuts.",
+        "Added automatic detection for Road Leveling, Surface Leveling, Specified Leveling, and Hole Patching.",
+        "Restored the mouse position after simulated clicks and reduced click occupancy time.",
+        "Made the interface adapt to window size, fixed enlarged or overlapping text, and added version and copyright information.",
+        "Fixed shortcut message callbacks, administrator permission handling, and conflict-list crashes.",
+        "Switched to fully open-source GPL-3.0 licensing, allowing research, modification, redistribution, and commercial use while requiring derivative distributions to remain open source and keep author credit."
       ]
     },
     {
@@ -43,6 +91,13 @@
         "支持键盘快捷键与鼠标侧键。",
         "增加管理员权限运行和鼠标点击恢复。",
         "修复热键回调与面板识别链路。"
+      ],
+      "changesEn": [
+        "Implemented automatic detection for Road Leveling, Surface Leveling, Specified Leveling, and Hole Patching.",
+        "Implemented shortcut mappings for buttons in all four ModelFun panels.",
+        "Added keyboard shortcuts and mouse side-button support.",
+        "Added administrator-level execution and mouse-position restoration.",
+        "Fixed the hotkey callback and panel-detection chain."
       ]
     },
     {
@@ -51,6 +106,10 @@
       "changes": [
         "原始原型版本。",
         "仅支持单个面板，并通过手动两点校准定位按钮。"
+      ],
+      "changesEn": [
+        "Original prototype version.",
+        "Supported only one panel and used manual two-point calibration to locate buttons."
       ]
     }
   ]

@@ -1,5 +1,6 @@
 # Personal runtime configuration
 config.json
+config-backups/
 
 # Generated release artifacts
 portable-dist/
@@ -11,6 +12,7 @@ portable-dist/
 *.log
 tests/*.png
 tests/*.jpg
+tests/*.pdf
 tests/_Temp*.ps1
 
 # Editor and OS files

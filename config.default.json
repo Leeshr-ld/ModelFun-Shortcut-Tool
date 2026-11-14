@@ -1,5 +1,6 @@
 {
-  "version": 4,
+  "version": 5,
+  "language": "zh-CN",
   "targetTitle": "模方ModelFun",
   "commonBindings": {
     "backup": {

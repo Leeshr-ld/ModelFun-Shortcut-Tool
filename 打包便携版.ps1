@@ -28,6 +28,9 @@ $copyMap = @(
     @{ Source = 'RoadLevelHotkeys.exe'; Destination = 'RoadLevelHotkeys.exe' },
     @{ Source = 'RoadLevelHotkeys.ps1'; Destination = 'RoadLevelHotkeys.ps1' },
     @{ Source = 'DpiSupport.ps1'; Destination = 'DpiSupport.ps1' },
+    @{ Source = 'Localization.ps1'; Destination = 'Localization.ps1' },
+    @{ Source = 'ConfigStorage.ps1'; Destination = 'ConfigStorage.ps1' },
+    @{ Source = 'SingleInstance.ps1'; Destination = 'SingleInstance.ps1' },
     @{ Source = 'config.default.json'; Destination = 'config.json' },
     @{ Source = 'ShortcutRules.ps1'; Destination = 'ShortcutRules.ps1' },
     @{ Source = 'MouseAutomation.ps1'; Destination = 'MouseAutomation.ps1' },
@@ -38,7 +41,8 @@ $copyMap = @(
     @{ Source = 'model_shortcuts.json'; Destination = 'model_shortcuts.json' },
     @{ Source = 'LICENSE'; Destination = 'LICENSE' },
     @{ Source = '版权与使用限制.txt'; Destination = '版权与使用限制.txt' },
-    @{ Source = '使用说明.md'; Destination = '使用说明.md' }
+    @{ Source = '使用说明.md'; Destination = '使用说明.md' },
+    @{ Source = '用户指南.html'; Destination = '用户指南.html' }
 )
 
 foreach ($entry in $copyMap) {

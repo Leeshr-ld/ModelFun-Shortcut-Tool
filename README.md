@@ -4,11 +4,24 @@
 
 一款面向 **ModelFun / 模方ModelFun** 的 Windows 快捷键与自动化工具。程序会自动识别当前置平面板，并为常用按钮提供可自定义的键盘、鼠标快捷键。
 
-> 当前版本：`V1.2.0`
+> 当前版本：`V1.3.0`
 >
 > 作者：`shijye`
 >
 > 许可证：[GNU GPL v3.0](LICENSE)
+
+## English
+
+ModelFun Shortcut Tool is a Windows utility that detects supported ModelFun panels and maps their buttons to customizable keyboard or mouse shortcuts.
+
+V1.3.0 adds:
+
+- A complete Chinese/English interface with a saved language choice.
+- Single-instance protection that activates the existing window.
+- Automatic configuration backups, in-app recovery, import, and export.
+- V5 configuration migration without losing existing shortcuts.
+
+The application requires administrator permission because ModelFun normally runs elevated. See the Chinese sections below for the full shortcut workflow, safety notes, and build/test instructions.
 
 ## 功能
 
@@ -21,6 +34,10 @@
 - 自动适配Windows DPI和窗口尺寸，减少文字遮挡。
 - 使用PerMonitorV2 DPI感知，并为100%–250%缩放、1080p/1440p/4K和超宽屏提供自适应布局规则。
 - 软件内“关于”窗口包含版本历史、作者和许可证说明。
+- 完整中文、English界面，可即时切换并保存语言选择。
+- 单实例保护，重复启动会激活已有窗口，不重复注册快捷键。
+- 配置自动备份、最近备份恢复，以及配置导入和导出。
+- 内置离线图形用户指南，支持中英切换和打印。
 
 ## 支持的模方面板
 
@@ -86,6 +103,10 @@ pwsh -NoProfile -File .\tests\Test-PanelBindings.ps1
 pwsh -NoProfile -File .\tests\Test-BackupWorkflow.ps1
 pwsh -NoProfile -File .\tests\Test-VersionInfo.ps1
 pwsh -NoProfile -File .\tests\Test-LayoutPolicy.ps1
+pwsh -NoProfile -File .\tests\Test-Localization.ps1
+pwsh -NoProfile -File .\tests\Test-ConfigStorage.ps1
+pwsh -NoProfile -File .\tests\Test-SingleInstance.ps1
+pwsh -NoProfile -File .\tests\Test-UserGuide.ps1
 powershell -NoProfile -File .\tests\Test-DpiAwareness.ps1
 powershell -NoProfile -File .\tests\Test-UiStartup.ps1
 pwsh -NoProfile -File .\tests\Test-ReleasePackage.ps1
@@ -102,6 +123,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Test-MouseClick.ps1
 ```text
 RoadLevelHotkeys.ps1   主程序与界面
 DpiSupport.ps1         进程级PerMonitorV2 DPI初始化
+Localization.ps1       中英文界面资源与显示名称映射
+ConfigStorage.ps1      配置安全写入、自动备份、恢复和导入导出
+SingleInstance.ps1     单实例互斥与窗口激活
+用户指南.html           离线图形化用户指南
 ShortcutRules.ps1      快捷键规则、冲突检测和默认设置
 MouseAutomation.ps1    快速鼠标点击与位置恢复
 BackupWorkflow.ps1     通用备份流程

@@ -18,6 +18,14 @@ try {
     if (-not (Test-Path -LiteralPath $result.ZipPath)) {
         throw "没有生成ZIP：$($result.ZipPath)"
     }
+    $exePath = Join-Path $result.ReleaseDirectory 'RoadLevelHotkeys.exe'
+    if (-not (Test-Path -LiteralPath $exePath)) {
+        throw "发行包没有生成EXE：$exePath"
+    }
+    $exeVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($exePath).FileVersion
+    if ($exeVersion -ne '1.3.0.0') {
+        throw "EXE文件版本错误：$exeVersion"
+    }
 
     $archive = [System.IO.Compression.ZipFile]::OpenRead($result.ZipPath)
     try {
@@ -42,6 +50,10 @@ try {
         'RoadLevelHotkeys.exe',
         'RoadLevelHotkeys.ps1',
         'DpiSupport.ps1',
+        'Localization.ps1',
+        'ConfigStorage.ps1',
+        'SingleInstance.ps1',
+        '用户指南.html',
         'config.json',
         'ShortcutRules.ps1',
         'MouseAutomation.ps1',
@@ -74,8 +86,8 @@ try {
         }
     }
 
-    if (-not ($names | Where-Object { $_ -like '*模方面板快捷键助手_V1.2.0/*' })) {
-        throw '发行包缺少V1.2.0顶层目录'
+    if (-not ($names | Where-Object { $_ -like '*模方面板快捷键助手_V1.3.0/*' })) {
+        throw '发行包缺少V1.3.0顶层目录'
     }
 
     if ([string]$config.commonBindings.backup.key -ne 'B') {

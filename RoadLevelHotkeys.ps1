@@ -4,7 +4,9 @@
 param(
     [switch]$SelfTest,
     [switch]$Diagnostic,
-    [switch]$UiSmokeTest
+    [switch]$UiSmokeTest,
+    [string]$UiSmokeLanguage = '',
+    [string]$UiSmokeScreenshotPath = ''
 )
 
 Set-StrictMode -Version 2.0
@@ -15,6 +17,23 @@ if (-not (Test-Path -LiteralPath $dpiSupportPath -PathType Leaf)) {
     throw "缺少DPI支持文件：$dpiSupportPath"
 }
 . $dpiSupportPath
+$localizationPath = Join-Path $PSScriptRoot 'Localization.ps1'
+if (-not (Test-Path -LiteralPath $localizationPath -PathType Leaf)) {
+    throw "缺少语言资源文件：$localizationPath"
+}
+. $localizationPath
+$script:UiSmokeLanguageOverride = if ([string]::IsNullOrWhiteSpace($UiSmokeLanguage)) {
+    ''
+}
+else {
+    Resolve-UiLanguage $UiSmokeLanguage
+}
+$script:UiLanguage = if ($script:UiSmokeLanguageOverride) {
+    $script:UiSmokeLanguageOverride
+}
+else {
+    'zh-CN'
+}
 try {
     $script:DpiInitialization = Initialize-PerMonitorDpiAwareness
 }
@@ -122,6 +141,12 @@ namespace RoadLevel
 
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsIconic(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int command);
 
         [DllImport("kernel32.dll")]
         private static extern void Sleep(uint milliseconds);
@@ -283,7 +308,11 @@ namespace RoadLevel
         public static void ActivateWindow(IntPtr hWnd)
         {
             if (hWnd != IntPtr.Zero)
+            {
+                if (IsIconic(hWnd))
+                    ShowWindow(hWnd, 9);
                 SetForegroundWindow(hWnd);
+            }
         }
 
         private static uint GetScreenPixel(int x, int y)
@@ -384,6 +413,7 @@ namespace RoadLevel
 
 $script:AppDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 $script:ConfigPath = Join-Path $script:AppDirectory 'config.json'
+$script:ConfigBackupDirectory = Join-Path $script:AppDirectory 'config-backups'
 $script:ModelShortcutsPath = Join-Path $script:AppDirectory 'model_shortcuts.json'
 $script:DiagnosticEnabled = ([bool]$Diagnostic -or [bool]$UiSmokeTest)
 $script:UiSmokeTest = [bool]$UiSmokeTest
@@ -395,6 +425,8 @@ $script:DiagnosticLogPath = Join-Path $script:AppDirectory '诊断日志.txt'
 . (Join-Path $script:AppDirectory 'BackupWorkflow.ps1')
 . (Join-Path $script:AppDirectory 'VersionInfo.ps1')
 . (Join-Path $script:AppDirectory 'LayoutPolicy.ps1')
+. (Join-Path $script:AppDirectory 'ConfigStorage.ps1')
+. (Join-Path $script:AppDirectory 'SingleInstance.ps1')
 $script:VersionPath = Join-Path $script:AppDirectory 'version.json'
 $script:VersionInfo = Get-AppVersionInfo -Path $script:VersionPath
 $script:AppVersion = [string]$script:VersionInfo.version
@@ -481,10 +513,19 @@ $script:CalibrationWindow = [IntPtr]::Zero
 $script:CalibrationF7WasDown = $false
 $script:LastPanelTitle = ''
 $script:LastMessage = ''
+$script:ConfigRecoveryNotice = ''
+$script:SingleInstanceGuard = $null
+$script:SuppressLanguageChange = $false
+
+function T([string]$Key, [hashtable]$Tokens = @{}) {
+    return Get-UiText -Key $Key -Language $script:UiLanguage -Tokens $Tokens
+}
 
 function Write-Config {
-    $json = $script:Config | ConvertTo-Json -Depth 10
-    Set-Content -LiteralPath $script:ConfigPath -Value $json -Encoding UTF8
+    $null = Save-ConfigFile `
+        -ConfigPath $script:ConfigPath `
+        -Config $script:Config `
+        -BackupDirectory $script:ConfigBackupDirectory
 }
 
 function Write-DiagnosticLog([string]$message) {
@@ -505,13 +546,26 @@ function Load-Config {
         Write-Config
     }
     else {
-        $script:Config = Get-Content -LiteralPath $script:ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $loadedConfig = Read-ConfigFileWithRecovery `
+            -ConfigPath $script:ConfigPath `
+            -BackupDirectory $script:ConfigBackupDirectory
+        $script:Config = $loadedConfig.Config
+        if ($loadedConfig.Restored) {
+            $script:ConfigRecoveryNotice = "RECOVERED_FROM=$($loadedConfig.RestoredFrom)"
+        }
     }
 
     $loadedVersion = if ($script:Config.PSObject.Properties['version']) { [int]$script:Config.version } else { 0 }
-    $script:Config = ConvertTo-V4ShortcutConfig -Config $script:Config
-    if ($loadedVersion -lt 4) {
+    $script:Config = ConvertTo-V5ShortcutConfig -Config $script:Config
+    if ($loadedVersion -lt 5) {
         Write-Config
+    }
+
+    $script:UiLanguage = if ($script:UiSmokeLanguageOverride) {
+        $script:UiSmokeLanguageOverride
+    }
+    else {
+        Resolve-UiLanguage ([string]$script:Config.language)
     }
 
     if (Test-Path -LiteralPath $script:ModelShortcutsPath) {
@@ -558,16 +612,35 @@ function Format-Binding($binding) {
         $parts.Add([string]$binding.key)
     }
     if ($parts.Count -eq 0) {
-        return '未绑定'
+        return T 'format.unbound'
     }
     return ($parts -join '+')
 }
 
 function Format-MouseBinding($binding) {
     switch ([string]$binding.mouseButton) {
-        'XButton1' { return '侧键1' }
-        'XButton2' { return '侧键2' }
-        default { return '无' }
+        'XButton1' { return (T 'mouse.side1') }
+        'XButton2' { return (T 'mouse.side2') }
+        default { return (T 'mouse.none') }
+    }
+}
+
+function Get-LocalizedConflictMessage($Conflict) {
+    if ($null -eq $Conflict) {
+        return ''
+    }
+    switch ([string]$Conflict.Kind) {
+        'Model' {
+            return (T 'conflict.model' @{
+                shortcut = ([string]$Conflict.Shortcut)
+                action = (Get-LocalizedActionCodeLabel -ActionName ([string]$Conflict.ActionName) -Language $script:UiLanguage)
+            })
+        }
+        default {
+            return (T 'conflict.internal' @{
+                action = (Get-LocalizedActionCodeLabel -ActionName ([string]$Conflict.ActionName) -Language $script:UiLanguage)
+            })
+        }
     }
 }
 
@@ -632,7 +705,7 @@ function Register-AllHotkeys {
         )
         if (-not $ok) {
             Unregister-AllHotkeys
-            Set-Status ("快捷键注册失败：{0}" -f (Format-Binding $binding)) 'C0392B'
+            Set-Status (T 'status.hotkeyRegistrationFailed' @{ binding = (Format-Binding $binding) }) '#C0392B'
             return $false
         }
         $script:HotkeyIds[$id] = $name
@@ -647,7 +720,7 @@ function Register-AllHotkeys {
 
 function Set-Status([string]$text, [string]$color = '#1F5F99') {
     if (-not $script:DpiReady) {
-        $text = "DPI受限：$text"
+        $text = T 'status.dpiLimited' @{ message = $text }
     }
     $script:LastMessage = $text
     $statusLabel.ForeColor = [System.Drawing.ColorTranslator]::FromHtml($color)
@@ -761,11 +834,11 @@ function Wait-ForWindowTitle([string]$TitleFragment, [int]$TimeoutMilliseconds =
 function Invoke-BackupWorkflow {
     $target = Get-TargetWindow
     if ($target -eq [IntPtr]::Zero) {
-        Set-Status '未找到模方ModelFun窗口。' '#C0392B'
+        Set-Status (T 'status.backupNoModelWindow') '#C0392B'
         return
     }
     if (-not [RoadLevel.WinApi]::IsTargetActive($target, [string]$script:Config.targetTitle)) {
-        Set-Status '模方窗口不在前台，已忽略备份操作。' '#C0392B'
+        Set-Status (T 'status.backupNotForeground') '#C0392B'
         return
     }
 
@@ -776,7 +849,7 @@ function Invoke-BackupWorkflow {
         $backupButtonY = $client.Y + 94
         Write-DiagnosticLog ("BACKUP_STEP=open-dialog; POINT={0},{1}" -f $backupButtonX, $backupButtonY)
         if ($script:DiagnosticEnabled) {
-            Set-Status '诊断模式：准备执行备份流程。' '#B9770E'
+            Set-Status (T 'status.backupDiagnostic') '#B9770E'
             return
         }
         Invoke-QuickClickAndRestore -X $backupButtonX -Y $backupButtonY | Out-Null
@@ -784,7 +857,7 @@ function Invoke-BackupWorkflow {
     }
 
     if ($dialogHandle -eq [IntPtr]::Zero) {
-        Set-Status '没有等到“备份和恢复”窗口。' '#C0392B'
+        Set-Status (T 'status.backupDialogTimeout') '#C0392B'
         return
     }
 
@@ -795,17 +868,17 @@ function Invoke-BackupWorkflow {
     Start-Sleep -Milliseconds 50
     Write-DiagnosticLog ("BACKUP_STEP=backup-now; POINT={0},{1}" -f $points.BackupNowX, $points.BackupNowY)
     Invoke-QuickClickAndRestore -X $points.BackupNowX -Y $points.BackupNowY | Out-Null
-    Set-Status '备份流程已执行：已全选并点击立即备份。' '#1E8449'
+    Set-Status (T 'status.backupComplete') '#1E8449'
 }
 
 function Invoke-PanelButton([string]$name) {
     $target = Get-TargetWindow
     if ($target -eq [IntPtr]::Zero) {
-        Set-Status '未找到模方ModelFun窗口。' '#C0392B'
+        Set-Status (T 'status.clickNoModelWindow') '#C0392B'
         return
     }
     if (-not [RoadLevel.WinApi]::IsTargetActive($target, [string]$script:Config.targetTitle)) {
-        Set-Status '模方窗口不在前台，已忽略这次点击。' '#C0392B'
+        Set-Status (T 'status.clickNotForeground') '#C0392B'
         return
     }
 
@@ -816,29 +889,39 @@ function Invoke-PanelButton([string]$name) {
 
     $panel = Get-ActivePanel
     if ($null -eq $panel) {
-        Set-Status '未识别到当前面板，请打开道路置平、表面置平、指定置平或补洞。' '#C0392B'
+        Set-Status (T 'status.panelNotRecognized') '#C0392B'
         return
     }
     if (-not $panel.Profile.buttons.Contains($name)) {
-        $bindingName = if ($name -eq 'backup') { '备份' } else { $name }
-        Set-Status ("当前「{0}」面板没有「{1}」操作。" -f $panel.Title, $bindingName) '#B9770E'
+        $bindingName = Get-LocalizedActionCodeLabel -ActionName $name -Language $script:UiLanguage
+        Set-Status (T 'status.actionUnavailable' @{
+            panel = (Get-LocalizedPanelTitle -PanelTitle $panel.Title -Language $script:UiLanguage)
+            action = $bindingName
+        }) '#B9770E'
         return
     }
 
     $point = Get-PanelPoint $name
     if ($null -eq $point) {
-        Set-Status '按钮位置识别失败，请重新打开面板后再试。' '#C0392B'
+        Set-Status (T 'status.panelPointFailed') '#C0392B'
         return
     }
 
     Write-DiagnosticLog ("ACTION={0}; PANEL={1}; LABEL={2}; POINT={3},{4}" -f $name, $point.Title, $point.Label, $point.X, $point.Y)
     if ($script:DiagnosticEnabled) {
-        Set-Status ("诊断模式：准备点击「{0}」({1},{2})" -f $point.Label, $point.X, $point.Y) '#B9770E'
+        Set-Status (T 'status.diagnosticClick' @{
+            label = (Get-LocalizedActionLabel -Label $point.Label -Language $script:UiLanguage)
+            x = $point.X
+            y = $point.Y
+        }) '#B9770E'
         return
     }
 
     Invoke-QuickClickAndRestore -X $point.X -Y $point.Y | Out-Null
-    Set-Status ("已点击「{0}」：{1}" -f $point.Title, $point.Label) '#1E8449'
+    Set-Status (T 'status.clicked' @{
+        panel = (Get-LocalizedPanelTitle -PanelTitle $point.Title -Language $script:UiLanguage)
+        label = (Get-LocalizedActionLabel -Label $point.Label -Language $script:UiLanguage)
+    }) '#1E8449'
 }
 
 function Update-HotkeyRegistration {
@@ -979,26 +1062,27 @@ function Refresh-BindingGrid($panel) {
         else {
             $conflicts = @(Get-BindingConflictList -ActionName $name -Binding $binding -Bindings $conflictScope -ModelConflicts $script:ModelShortcutConflicts)
         }
-        $status = '正常'
+        $status = T 'row.normal'
         $statusColor = [System.Drawing.Color]::FromArgb(30, 105, 60)
         if ($conflicts.Count -gt 0) {
             foreach ($conflict in $conflicts) {
-                if (-not $warningMessages.Contains($conflict.Message)) {
-                    $warningMessages.Add($conflict.Message)
+                $localizedConflictMessage = Get-LocalizedConflictMessage $conflict
+                if (-not $warningMessages.Contains($localizedConflictMessage)) {
+                    $warningMessages.Add($localizedConflictMessage)
                 }
             }
             if (@($conflicts | Where-Object Kind -eq 'Model').Count -gt 0) {
-                $status = '原版冲突'
+                $status = T 'row.modelConflict'
                 $statusColor = [System.Drawing.Color]::FromArgb(180, 95, 0)
             }
             else {
-                $status = '重复绑定'
+                $status = T 'row.duplicate'
                 $statusColor = [System.Drawing.Color]::FromArgb(180, 40, 40)
             }
         }
 
         $rowIndex = $bindingGrid.Rows.Add(
-            [string]$button.label,
+            (Get-LocalizedActionLabel -Label ([string]$button.label) -Language $script:UiLanguage),
             (Format-Binding $binding),
             (Format-MouseBinding $binding),
             $status
@@ -1008,27 +1092,30 @@ function Refresh-BindingGrid($panel) {
         $row.Cells[3].Style.ForeColor = $statusColor
         $row.Cells[3].Style.Font = New-Object System.Drawing.Font('Microsoft YaHei UI', 9, [System.Drawing.FontStyle]::Bold)
         if ($conflicts.Count -gt 0) {
-            $conflictText = ($conflicts | ForEach-Object { $_.Message }) -join "`r`n"
+            $conflictText = ($conflicts | ForEach-Object { Get-LocalizedConflictMessage $_ }) -join "`r`n"
             $row.Cells[3].ToolTipText = $conflictText
             $row.Cells[1].ToolTipText = $conflictText
         }
     }
 
     if ($warningMessages.Count -gt 0) {
-        $shortcutNoticeLabel.Text = "检测到 {0} 个快捷键提示：{1} 双击行可修改。" -f $warningMessages.Count, $warningMessages[0]
+        $shortcutNoticeLabel.Text = T 'notice.conflicts' @{
+            count = $warningMessages.Count
+            first = $warningMessages[0]
+        }
         $shortcutNoticeLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 95, 0)
     }
     elseif ($null -eq $panel) {
-        $shortcutNoticeLabel.Text = '通用备份快捷键可用；打开面板后会显示该面板按钮。'
+        $shortcutNoticeLabel.Text = T 'notice.noPanel'
         $shortcutNoticeLabel.ForeColor = [System.Drawing.Color]::FromArgb(30, 105, 60)
     }
     else {
-        $shortcutNoticeLabel.Text = '快捷键无内部重复或已登记的原版冲突；双击行可修改。'
+        $shortcutNoticeLabel.Text = T 'notice.noConflict'
         $shortcutNoticeLabel.ForeColor = [System.Drawing.Color]::FromArgb(30, 105, 60)
     }
 
     $backupDisplay = Get-ShortcutDisplay (Get-ActionBinding -Config $script:Config -PanelTitle '' -ActionName 'backup')
-    $hintLabel.Text = "面板切换后自动刷新；通用备份：$backupDisplay；双击表格行可修改快捷键。"
+    $hintLabel.Text = T 'status.hint' @{ backup = $backupDisplay }
 }
 
 function Close-CalibrationOverlay {
@@ -1047,8 +1134,8 @@ function Start-Calibration {
     $target = Get-TargetWindow
     if ($target -eq [IntPtr]::Zero) {
         [System.Windows.Forms.MessageBox]::Show(
-            '请先打开并显示模方ModelFun窗口，再开始校准。',
-            '未找到模方窗口',
+            (T 'dialog.modelWindowMissingBody'),
+            (T 'dialog.modelWindowMissingTitle'),
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Warning
         ) | Out-Null
@@ -1083,7 +1170,7 @@ function Start-Calibration {
     $overlayLabel.Height = 50
     $overlayLabel.Font = New-Object System.Drawing.Font('Microsoft YaHei UI', 11, [System.Drawing.FontStyle]::Bold)
     $overlayLabel.ForeColor = [System.Drawing.Color]::White
-    $overlayLabel.Text = '第1步：把鼠标移到「操作图标」的正中心，然后按 F7。'
+    $overlayLabel.Text = T 'calibration.step1'
     $overlay.Controls.Add($overlayLabel)
 
     $overlayHint = New-Object System.Windows.Forms.Label
@@ -1094,11 +1181,11 @@ function Start-Calibration {
     $overlayHint.Height = 25
     $overlayHint.Font = New-Object System.Drawing.Font('Microsoft YaHei UI', 9)
     $overlayHint.ForeColor = [System.Drawing.Color]::FromArgb(205, 215, 225)
-    $overlayHint.Text = '按 Esc 取消。校准只读取位置，不会点击按钮。'
+    $overlayHint.Text = T 'calibration.hint'
     $overlay.Controls.Add($overlayHint)
 
     $cancelButton = New-Object System.Windows.Forms.Button
-    $cancelButton.Text = '取消校准'
+    $cancelButton.Text = T 'button.cancelCalibration'
     $cancelButton.Left = 540
     $cancelButton.Top = 66
     $cancelButton.Width = 90
@@ -1110,7 +1197,7 @@ function Start-Calibration {
     $script:CalibrationOverlayLabel = $overlayLabel
     $overlay.Show()
     $overlay.Activate()
-    Set-Status '校准中：等待鼠标位置。' '#B9770E'
+    Set-Status (T 'status.calibrationWaiting') '#B9770E'
 }
 
 function Complete-Calibration($firstPoint, $secondPoint) {
@@ -1119,8 +1206,8 @@ function Complete-Calibration($firstPoint, $secondPoint) {
 
     if ($deltaX -le 0 -or $deltaY -le 0) {
         [System.Windows.Forms.MessageBox]::Show(
-            '两个校准点的位置关系不正确。请重新开始，先点「操作图标」，再点「取消」。',
-            '校准失败',
+            (T 'message.calibrationOrder'),
+            (T 'message.calibrationFailedTitle'),
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Warning
         ) | Out-Null
@@ -1132,10 +1219,13 @@ function Complete-Calibration($firstPoint, $secondPoint) {
     $scaleY = $deltaY / 54.0
     $ratio = $scaleX / $scaleY
     if ($scaleX -lt 0.45 -or $scaleX -gt 3.2 -or $scaleY -lt 0.45 -or $scaleY -gt 3.2 -or $ratio -lt 0.65 -or $ratio -gt 1.55) {
-        $errorMessage = "两个点的比例异常（X倍率 {0:N2}，Y倍率 {1:N2}）。请确认选的是「操作图标」和「取消」的中心。" -f $scaleX, $scaleY
+        $errorMessage = T 'message.calibrationRatio' @{
+            x = ('{0:N2}' -f $scaleX)
+            y = ('{0:N2}' -f $scaleY)
+        }
         [System.Windows.Forms.MessageBox]::Show(
             $errorMessage,
-            '校准失败',
+            (T 'message.calibrationFailedTitle'),
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Warning
         ) | Out-Null
@@ -1168,7 +1258,7 @@ function Complete-Calibration($firstPoint, $secondPoint) {
     $target = $script:CalibrationWindow
     Close-CalibrationOverlay
     [RoadLevel.WinApi]::ActivateWindow($target)
-    Set-Status '校准完成，可以开始使用快捷键。' '#1E8449'
+    Set-Status (T 'status.calibrationComplete') '#1E8449'
     Update-HotkeyRegistration
 }
 
@@ -1182,7 +1272,7 @@ function Handle-CalibrationTick {
 
     if ($escapeDown) {
         Close-CalibrationOverlay
-        Set-Status '已取消校准。' '#C0392B'
+        Set-Status (T 'status.calibrationCancelled') '#C0392B'
         $script:CalibrationF7WasDown = $f7Down
         return
     }
@@ -1191,7 +1281,7 @@ function Handle-CalibrationTick {
         $point = [RoadLevel.WinApi]::GetCursorPosition()
 
         if (-not [RoadLevel.WinApi]::IsPointInsideWindow($script:CalibrationWindow, $point)) {
-            Set-Status '鼠标不在模方窗口内，请移到面板按钮中心后再按 F7。' '#C0392B'
+            Set-Status (T 'status.calibrationOutside') '#C0392B'
             $script:CalibrationF7WasDown = $f7Down
             return
         }
@@ -1199,8 +1289,8 @@ function Handle-CalibrationTick {
         if ($script:CalibrationStep -eq 1) {
             $script:CalibrationFirstPoint = $point
             $script:CalibrationStep = 2
-            $script:CalibrationOverlayLabel.Text = '第2步：把鼠标移到「取消」文字的正中心，然后按 F7。'
-            Set-Status '已记录第1个点，等待「取消」按钮位置。' '#B9770E'
+            $script:CalibrationOverlayLabel.Text = T 'calibration.step2'
+            Set-Status (T 'status.calibrationFirstPoint') '#B9770E'
         }
         elseif ($script:CalibrationStep -eq 2) {
             $firstPoint = $script:CalibrationFirstPoint
@@ -1257,7 +1347,7 @@ function Show-ShortcutEditor([string]$ActionName) {
     $panel = Get-ActivePanel
     $isBackupAction = $ActionName -eq 'backup'
     if (-not $isBackupAction -and ($null -eq $panel -or -not $panel.Profile.buttons.Contains($ActionName))) {
-        Set-Status '当前没有可编辑的受支持面板。' '#B9770E'
+        Set-Status (T 'status.panelNotRecognized') '#B9770E'
         return
     }
 
@@ -1274,7 +1364,7 @@ function Show-ShortcutEditor([string]$ActionName) {
     Unregister-AllHotkeys
 
     $dialog = New-Object System.Windows.Forms.Form
-    $dialog.Text = '修改快捷键'
+    $dialog.Text = T 'editor.title'
     $dialog.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterParent
     $dialog.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $dialog.MaximizeBox = $false
@@ -1286,7 +1376,9 @@ function Show-ShortcutEditor([string]$ActionName) {
     Resize-DialogWithinWorkingArea -Dialog $dialog -OwnerControl $form
 
     $title = New-Object System.Windows.Forms.Label
-    $title.Text = "修改「$($buttonInfo.label)」的快捷键"
+    $title.Text = T 'editor.heading' @{
+        label = (Get-LocalizedActionLabel -Label ([string]$buttonInfo.label) -Language $script:UiLanguage)
+    }
     $title.Left = 22
     $title.Top = 18
     $title.Width = 510
@@ -1295,7 +1387,7 @@ function Show-ShortcutEditor([string]$ActionName) {
     $dialog.Controls.Add($title)
 
     $captureLabel = New-Object System.Windows.Forms.Label
-    $captureLabel.Text = '键盘快捷键（点击框内，然后直接按新的组合键）'
+    $captureLabel.Text = T 'editor.keyboardLabel'
     $captureLabel.Left = 24
     $captureLabel.Top = 62
     $captureLabel.Width = 490
@@ -1313,7 +1405,7 @@ function Show-ShortcutEditor([string]$ActionName) {
     $dialog.Controls.Add($captureBox)
 
     $clearKeyboardButton = New-Object System.Windows.Forms.Button
-    $clearKeyboardButton.Text = '清除键盘'
+    $clearKeyboardButton.Text = T 'editor.clearKeyboard'
     $clearKeyboardButton.Left = 366
     $clearKeyboardButton.Top = 86
     $clearKeyboardButton.Width = 110
@@ -1321,7 +1413,7 @@ function Show-ShortcutEditor([string]$ActionName) {
     $dialog.Controls.Add($clearKeyboardButton)
 
     $mouseLabel = New-Object System.Windows.Forms.Label
-    $mouseLabel.Text = '鼠标快捷键'
+    $mouseLabel.Text = T 'editor.mouseLabel'
     $mouseLabel.Left = 24
     $mouseLabel.Top = 137
     $mouseLabel.Width = 120
@@ -1333,9 +1425,9 @@ function Show-ShortcutEditor([string]$ActionName) {
     $mouseCombo.Top = 134
     $mouseCombo.Width = 160
     $mouseCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-    [void]$mouseCombo.Items.Add('无')
-    [void]$mouseCombo.Items.Add('鼠标侧键1')
-    [void]$mouseCombo.Items.Add('鼠标侧键2')
+    [void]$mouseCombo.Items.Add((T 'mouse.none'))
+    [void]$mouseCombo.Items.Add((T 'mouse.side1'))
+    [void]$mouseCombo.Items.Add((T 'mouse.side2'))
     switch ([string]$draft.mouseButton) {
         'XButton1' { $mouseCombo.SelectedIndex = 1 }
         'XButton2' { $mouseCombo.SelectedIndex = 2 }
@@ -1352,7 +1444,7 @@ function Show-ShortcutEditor([string]$ActionName) {
     $dialog.Controls.Add($conflictLabel)
 
     $saveButton = New-Object System.Windows.Forms.Button
-    $saveButton.Text = '保存'
+    $saveButton.Text = T 'button.save'
     $saveButton.Left = 330
     $saveButton.Top = 262
     $saveButton.Width = 95
@@ -1360,7 +1452,7 @@ function Show-ShortcutEditor([string]$ActionName) {
     $dialog.Controls.Add($saveButton)
 
     $cancelButton = New-Object System.Windows.Forms.Button
-    $cancelButton.Text = '取消'
+    $cancelButton.Text = T 'button.cancel'
     $cancelButton.Left = 437
     $cancelButton.Top = 262
     $cancelButton.Width = 95
@@ -1370,7 +1462,7 @@ function Show-ShortcutEditor([string]$ActionName) {
     $dialog.CancelButton = $cancelButton
 
     $refreshEditorConflict = {
-        $captureBox.Text = if ([string]::IsNullOrWhiteSpace([string]$draft.key)) { '未绑定' } else { Get-ShortcutDisplay $draft }
+        $captureBox.Text = if ([string]::IsNullOrWhiteSpace([string]$draft.key)) { T 'format.unbound' } else { Get-ShortcutDisplay $draft }
         switch ($mouseCombo.SelectedIndex) {
             1 { $draft.mouseButton = 'XButton1' }
             2 { $draft.mouseButton = 'XButton2' }
@@ -1389,11 +1481,11 @@ function Show-ShortcutEditor([string]$ActionName) {
             $conflicts = @(Get-BindingConflictList -ActionName $ActionName -Binding $draft -Bindings $scope -ModelConflicts $script:ModelShortcutConflicts)
         }
         if ($conflicts.Count -eq 0) {
-            $conflictLabel.Text = '未发现冲突。'
+            $conflictLabel.Text = T 'editor.noConflict'
             $conflictLabel.ForeColor = [System.Drawing.Color]::FromArgb(30, 105, 60)
         }
         else {
-            $conflictLabel.Text = ($conflicts | ForEach-Object { $_.Message }) -join "`r`n"
+            $conflictLabel.Text = ($conflicts | ForEach-Object { Get-LocalizedConflictMessage $_ }) -join "`r`n"
             if (@($conflicts | Where-Object Kind -eq 'Model').Count -gt 0) {
                 $conflictLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 95, 0)
             }
@@ -1446,8 +1538,8 @@ function Show-ShortcutEditor([string]$ActionName) {
     $saveButton.Add_Click({
         if ([string]::IsNullOrWhiteSpace([string]$draft.key) -and [string]::IsNullOrWhiteSpace([string]$draft.mouseButton)) {
             [System.Windows.Forms.MessageBox]::Show(
-                '键盘和鼠标至少需要绑定一个。',
-                '无法保存',
+                (T 'message.bindingRequired'),
+                (T 'message.cannotSave'),
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Warning
             ) | Out-Null
@@ -1468,8 +1560,8 @@ function Show-ShortcutEditor([string]$ActionName) {
         $internalConflict = $conflicts | Where-Object Kind -eq 'Internal' | Select-Object -First 1
         if ($null -ne $internalConflict) {
             [System.Windows.Forms.MessageBox]::Show(
-                $internalConflict.Message,
-                '快捷键重复',
+                (Get-LocalizedConflictMessage $internalConflict),
+                (T 'message.shortcutDuplicate'),
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Error
             ) | Out-Null
@@ -1479,8 +1571,8 @@ function Show-ShortcutEditor([string]$ActionName) {
         $modelConflict = $conflicts | Where-Object Kind -eq 'Model' | Select-Object -First 1
         if ($null -ne $modelConflict) {
             $answer = [System.Windows.Forms.MessageBox]::Show(
-                "$($modelConflict.Message)`r`n`r`n面板打开时助手会拦截此组合；面板未打开时仍可能触发模方原功能。是否继续保存？",
-                '模方原版快捷键冲突',
+                (T 'message.modelConflictBody' @{ message = (Get-LocalizedConflictMessage $modelConflict) }),
+                (T 'message.modelConflictTitle'),
                 [System.Windows.Forms.MessageBoxButtons]::YesNo,
                 [System.Windows.Forms.MessageBoxIcon]::Warning
             )
@@ -1491,8 +1583,8 @@ function Show-ShortcutEditor([string]$ActionName) {
 
         if (-not (Test-ShortcutUsable $draft)) {
             [System.Windows.Forms.MessageBox]::Show(
-                '这个键盘组合无法注册，可能已被Windows或其他软件占用。',
-                '快捷键不可用',
+                (T 'message.shortcutUnavailable'),
+                (T 'message.unavailableTitle'),
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Error
             ) | Out-Null
@@ -1520,8 +1612,8 @@ function Show-ShortcutEditor([string]$ActionName) {
 
 function Reset-ShortcutSettings {
     $answer = [System.Windows.Forms.MessageBox]::Show(
-        '确定把全部键盘和鼠标快捷键恢复为原始设置吗？',
-        '恢复默认快捷键',
+        (T 'message.resetConfirm'),
+        (T 'message.resetTitle'),
         [System.Windows.Forms.MessageBoxButtons]::YesNo,
         [System.Windows.Forms.MessageBoxIcon]::Question
     )
@@ -1533,12 +1625,140 @@ function Reset-ShortcutSettings {
     Write-Config
     Unregister-AllHotkeys
     Load-ConfigurationIntoUi
-    Set-Status '已恢复默认快捷键。' '#1E8449'
+    Set-Status (T 'status.defaultsRestored') '#1E8449'
+}
+
+function Export-ShortcutConfiguration {
+    $dialog = New-Object System.Windows.Forms.SaveFileDialog
+    try {
+        $dialog.Title = T 'config.exportTitle'
+        $dialog.Filter = T 'config.filter'
+        $dialog.DefaultExt = 'json'
+        $dialog.AddExtension = $true
+        $dialog.FileName = 'ModelFun-Shortcuts-{0}.json' -f (Get-Date).ToString('yyyyMMdd-HHmmss')
+        if ($dialog.ShowDialog($form) -ne [System.Windows.Forms.DialogResult]::OK) {
+            return
+        }
+        $null = Export-ConfigFile -ConfigPath $script:ConfigPath -DestinationPath $dialog.FileName
+        Set-Status (T 'config.exportSuccess') '#1E8449'
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            (T 'config.exportFailed' @{ message = $_.Exception.Message }),
+            (T 'button.exportConfig'),
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        ) | Out-Null
+    }
+    finally {
+        $dialog.Dispose()
+    }
+}
+
+function Import-ShortcutConfiguration {
+    $dialog = New-Object System.Windows.Forms.OpenFileDialog
+    try {
+        $dialog.Title = T 'config.importTitle'
+        $dialog.Filter = T 'config.filter'
+        $dialog.CheckFileExists = $true
+        $dialog.Multiselect = $false
+        if ($dialog.ShowDialog($form) -ne [System.Windows.Forms.DialogResult]::OK) {
+            return
+        }
+        Import-ConfigFile `
+            -SourcePath $dialog.FileName `
+            -ConfigPath $script:ConfigPath `
+            -BackupDirectory $script:ConfigBackupDirectory `
+            -Validator {
+                param($candidate)
+                ConvertTo-V5ShortcutConfig -Config $candidate
+            } | Out-Null
+        Unregister-AllHotkeys
+        Load-ConfigurationIntoUi
+        Set-Status (T 'config.importSuccess') '#1E8449'
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            (T 'config.importFailed' @{ message = $_.Exception.Message }),
+            (T 'button.importConfig'),
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        ) | Out-Null
+    }
+    finally {
+        $dialog.Dispose()
+    }
+}
+
+function Restore-ShortcutConfiguration {
+    $latestBackup = Get-LatestConfigBackup -BackupDirectory $script:ConfigBackupDirectory
+    if ($null -eq $latestBackup) {
+        [System.Windows.Forms.MessageBox]::Show(
+            (T 'config.noBackup'),
+            (T 'config.restoreTitle'),
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information
+        ) | Out-Null
+        return
+    }
+
+    $answer = [System.Windows.Forms.MessageBox]::Show(
+        (T 'config.restoreConfirm'),
+        (T 'config.restoreTitle'),
+        [System.Windows.Forms.MessageBoxButtons]::YesNo,
+        [System.Windows.Forms.MessageBoxIcon]::Question
+    )
+    if ($answer -ne [System.Windows.Forms.DialogResult]::Yes) {
+        return
+    }
+
+    try {
+        $null = Restore-LatestConfigFile `
+            -ConfigPath $script:ConfigPath `
+            -BackupDirectory $script:ConfigBackupDirectory
+        Unregister-AllHotkeys
+        Load-ConfigurationIntoUi
+        Set-Status (T 'config.restoreSuccess') '#1E8449'
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            (T 'config.restoreFailed' @{ message = $_.Exception.Message }),
+            (T 'config.restoreTitle'),
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        ) | Out-Null
+    }
+}
+
+function Show-UserGuide {
+    $guidePath = Join-Path $script:AppDirectory '用户指南.html'
+    if (-not (Test-Path -LiteralPath $guidePath -PathType Leaf)) {
+        [System.Windows.Forms.MessageBox]::Show(
+            (T 'guide.notFoundBody'),
+            (T 'guide.notFoundTitle'),
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Warning
+        ) | Out-Null
+        return
+    }
+
+    try {
+        $guideUri = ([System.Uri]$guidePath).AbsoluteUri
+        Start-Process -FilePath "$guideUri?lang=$($script:UiLanguage)"
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            (T 'guide.openFailed' @{ message = $_.Exception.Message }),
+            (T 'guide.notFoundTitle'),
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        ) | Out-Null
+    }
 }
 
 function Show-AboutDialog {
     $dialog = New-Object System.Windows.Forms.Form
-    $dialog.Text = "关于 模方面板快捷键助手 $($script:AppVersion)"
+    $dialog.Text = "$(T 'about.title') $($script:AppVersion)"
     $dialog.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterParent
     $dialog.MinimumSize = New-Object System.Drawing.Size(620, 460)
     $dialog.ClientSize = New-Object System.Drawing.Size(700, 540)
@@ -1561,7 +1781,7 @@ function Show-AboutDialog {
     $dialog.Controls.Add($layout)
 
     $heading = New-Object System.Windows.Forms.Label
-    $heading.Text = "关于 模方面板快捷键助手　$($script:AppVersion)"
+    $heading.Text = T 'about.heading' @{ version = $script:AppVersion }
     $heading.Dock = [System.Windows.Forms.DockStyle]::Fill
     $heading.Font = New-Object System.Drawing.Font('Microsoft YaHei UI', 14, [System.Drawing.FontStyle]::Bold)
     $heading.ForeColor = [System.Drawing.Color]::FromArgb(35, 55, 75)
@@ -1574,7 +1794,7 @@ function Show-AboutDialog {
     $textBox.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
     $textBox.BackColor = [System.Drawing.Color]::White
     $textBox.Font = New-Object System.Drawing.Font('Microsoft YaHei UI', 9)
-    $textBox.Text = Get-AboutText -Info $script:VersionInfo
+    $textBox.Text = Get-AboutText -Info $script:VersionInfo -Language $script:UiLanguage
     $textBox.SelectionStart = 0
     $textBox.SelectionLength = 0
     $layout.Controls.Add($textBox, 0, 1)
@@ -1587,7 +1807,7 @@ function Show-AboutDialog {
     $layout.Controls.Add($buttonPanel, 0, 2)
 
     $okButton = New-Object System.Windows.Forms.Button
-    $okButton.Text = '确定'
+    $okButton.Text = T 'button.ok'
     $okButton.Width = 100
     $okButton.Height = 32
     $okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
@@ -1600,6 +1820,19 @@ function Show-AboutDialog {
 
 function Load-ConfigurationIntoUi {
     Load-Config
+    $script:SuppressLanguageChange = $true
+    try {
+        foreach ($option in $languageCombo.Items) {
+            if ([string]$option.Code -eq $script:UiLanguage) {
+                $languageCombo.SelectedItem = $option
+                break
+            }
+        }
+    }
+    finally {
+        $script:SuppressLanguageChange = $false
+    }
+    Apply-UiLanguage
     Refresh-Detection
 }
 
@@ -1609,28 +1842,31 @@ function Refresh-Detection([switch]$ShowDialog) {
     Refresh-BindingGrid $panel
 
     if ($null -ne $panel) {
-        Set-Status ("已自动识别「{0}」，共 {1} 个可用按钮。" -f $panel.Title, $panel.Profile.buttons.Count) '#1E8449'
+        Set-Status (T 'status.detectedInfo' @{
+            panel = (Get-LocalizedPanelTitle -PanelTitle $panel.Title -Language $script:UiLanguage)
+            count = $panel.Profile.buttons.Count
+        }) '#1E8449'
         return
     }
 
     $target = Get-TargetWindow
     if ($target -eq [IntPtr]::Zero) {
-        Set-Status '等待模方ModelFun窗口。' '#B9770E'
+        Set-Status (T 'status.waitingModelFun') '#B9770E'
         if ($ShowDialog) {
             [System.Windows.Forms.MessageBox]::Show(
-                '没有找到模方ModelFun窗口。请先打开模方并显示需要操作的面板。',
-                '未找到模方窗口',
+                (T 'dialog.modelWindowMissingBody'),
+                (T 'dialog.modelWindowMissingTitle'),
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Warning
             ) | Out-Null
         }
     }
     else {
-        Set-Status '等待打开：道路置平、表面置平、指定置平或补洞。' '#B9770E'
+        Set-Status (T 'status.waitingPanel') '#B9770E'
         if ($ShowDialog) {
             [System.Windows.Forms.MessageBox]::Show(
-                '模方已运行，但没有识别到支持的置平或补洞面板。请先打开其中一个面板。',
-                '未识别到面板',
+                (T 'dialog.panelMissingBody'),
+                (T 'dialog.panelMissingTitle'),
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             ) | Out-Null
@@ -1739,12 +1975,37 @@ if ($SelfTest) {
         exit 0
 }
 
+Load-Config
+
+if (-not $SelfTest -and -not $script:UiSmokeTest) {
+    $script:SingleInstanceGuard = New-SingleInstanceGuard -Name 'RoadLevelHotkeys-shijye'
+    if (-not $script:SingleInstanceGuard.Created) {
+        $existingWindow = [IntPtr]::Zero
+        for ($attempt = 0; $attempt -lt 20 -and $existingWindow -eq [IntPtr]::Zero; $attempt++) {
+            foreach ($titleFragment in @('模方面板快捷键助手', 'ModelFun Shortcut Tool')) {
+                $existingWindow = [RoadLevel.WinApi]::FindWindowContaining($titleFragment)
+                if ($existingWindow -ne [IntPtr]::Zero) {
+                    break
+                }
+            }
+            if ($existingWindow -eq [IntPtr]::Zero) {
+                Start-Sleep -Milliseconds 100
+            }
+        }
+        if ($existingWindow -ne [IntPtr]::Zero) {
+            [RoadLevel.WinApi]::ActivateWindow($existingWindow)
+        }
+        Close-SingleInstanceGuard -Guard $script:SingleInstanceGuard
+        exit 0
+    }
+}
+
 $currentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
 $currentPrincipal = New-Object System.Security.Principal.WindowsPrincipal($currentIdentity)
 if (-not $currentPrincipal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator) -and -not $script:UiSmokeTest) {
     [System.Windows.Forms.MessageBox]::Show(
-        '模方正以管理员权限运行。请关闭本窗口，双击 RoadLevelHotkeys.exe 并在UAC提示中点击“是”。',
-        '需要管理员权限',
+        (T 'message.adminRequired'),
+        (T 'message.adminRequiredTitle'),
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Warning
     ) | Out-Null
@@ -1765,7 +2026,7 @@ $form.add_HotkeyPressed({
 if ($script:DiagnosticEnabled) {
     $script:HotkeyIds[0x7F01] = 'slot1'
 }
-$form.Text = "模方面板快捷键助手 $($script:AppVersion)"
+$form.Text = "$(T 'app.name') $($script:AppVersion)"
 $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
 $form.ClientSize = New-Object System.Drawing.Size(860, 580)
 $form.MinimumSize = New-Object System.Drawing.Size(780, 540)
@@ -1774,7 +2035,7 @@ $form.Font = New-Object System.Drawing.Font('Microsoft YaHei UI', 9)
 $form.BackColor = [System.Drawing.Color]::FromArgb(246, 248, 251)
 
 $titleLabel = New-Object System.Windows.Forms.Label
-$titleLabel.Text = "模方面板 · 自动识别快捷键　$($script:AppVersion)"
+$titleLabel.Text = "$(T 'main.title')　$($script:AppVersion)"
 $titleLabel.Left = 20
 $titleLabel.Top = 16
 $titleLabel.Width = 470
@@ -1783,8 +2044,28 @@ $titleLabel.Font = New-Object System.Drawing.Font('Microsoft YaHei UI', 16, [Sys
 $titleLabel.ForeColor = [System.Drawing.Color]::FromArgb(35, 55, 75)
 $form.Controls.Add($titleLabel)
 
+$languageCombo = New-Object System.Windows.Forms.ComboBox
+$languageCombo.Left = 708
+$languageCombo.Top = 18
+$languageCombo.Width = 132
+$languageCombo.Height = 34
+$languageCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+$languageCombo.DisplayMember = 'DisplayName'
+$languageCombo.ValueMember = 'Code'
+$languageCombo.AccessibleName = T 'language.label'
+$languageCombo.TabStop = $true
+foreach ($languageOption in @(Get-UiLanguageOptions)) {
+    [void]$languageCombo.Items.Add($languageOption)
+    if ($languageOption.Code -eq $script:UiLanguage) {
+        $languageCombo.SelectedItem = $languageOption
+    }
+}
+$languageToolTip = New-Object System.Windows.Forms.ToolTip
+$languageToolTip.SetToolTip($languageCombo, (T 'language.tooltip'))
+$form.Controls.Add($languageCombo)
+
 $summaryLabel = New-Object System.Windows.Forms.Label
-$summaryLabel.Text = "作者：shijye｜自动识别四类置平/补洞面板`r`nGPL-3.0 完全开源；允许修改与再分发，衍生发行须保留源码和作者署名。"
+$summaryLabel.Text = T 'main.summary'
 $summaryLabel.Left = 21
 $summaryLabel.Top = 64
 $summaryLabel.Width = 720
@@ -1823,10 +2104,10 @@ $bindingGrid.ColumnHeadersDefaultCellStyle.Font = New-Object System.Drawing.Font
 $bindingGrid.EnableHeadersVisualStyles = $false
 $bindingGrid.ColumnHeadersHeight = 34
 $bindingGrid.RowTemplate.Height = 32
-[void]$bindingGrid.Columns.Add('action', '动作 / 面板按钮')
-[void]$bindingGrid.Columns.Add('keyboard', '键盘快捷键')
-[void]$bindingGrid.Columns.Add('mouse', '鼠标快捷键')
-[void]$bindingGrid.Columns.Add('status', '提示')
+[void]$bindingGrid.Columns.Add('action', (T 'column.action'))
+[void]$bindingGrid.Columns.Add('keyboard', (T 'column.keyboard'))
+[void]$bindingGrid.Columns.Add('mouse', (T 'column.mouse'))
+[void]$bindingGrid.Columns.Add('status', (T 'column.status'))
 $bindingGrid.Columns[0].FillWeight = 28
 $bindingGrid.Columns[1].FillWeight = 32
 $bindingGrid.Columns[2].FillWeight = 18
@@ -1856,10 +2137,10 @@ $buttonPanel.BackColor = [System.Drawing.Color]::Transparent
 $form.Controls.Add($buttonPanel)
 
 $calibrateButton = New-Object System.Windows.Forms.Button
-$calibrateButton.Text = '立即识别'
+$calibrateButton.Text = T 'button.detect'
 $calibrateButton.Left = 20
 $calibrateButton.Top = 358
-$calibrateButton.Width = 90
+$calibrateButton.Width = 105
 $calibrateButton.Height = 36
 $calibrateButton.BackColor = [System.Drawing.Color]::FromArgb(42, 116, 178)
 $calibrateButton.ForeColor = [System.Drawing.Color]::White
@@ -1868,14 +2149,14 @@ $calibrateButton.Add_Click({ Refresh-Detection -ShowDialog })
 $buttonPanel.Controls.Add($calibrateButton)
 
 $editShortcutButton = New-Object System.Windows.Forms.Button
-$editShortcutButton.Text = '修改快捷键'
+$editShortcutButton.Text = T 'button.editShortcut'
 $editShortcutButton.Left = 118
 $editShortcutButton.Top = 358
-$editShortcutButton.Width = 110
+$editShortcutButton.Width = 120
 $editShortcutButton.Height = 36
 $editShortcutButton.Add_Click({
     if ($bindingGrid.CurrentRow -eq $null -or $bindingGrid.CurrentRow.Index -lt 0 -or $bindingGrid.CurrentRow.Index -ge $script:GridActionNames.Count) {
-        Set-Status '请先在表中选择一个按钮。' '#B9770E'
+        Set-Status (T 'status.selectRow') '#B9770E'
         return
     }
     Show-ShortcutEditor $script:GridActionNames[$bindingGrid.CurrentRow.Index]
@@ -1883,19 +2164,19 @@ $editShortcutButton.Add_Click({
 $buttonPanel.Controls.Add($editShortcutButton)
 
 $resetShortcutButton = New-Object System.Windows.Forms.Button
-$resetShortcutButton.Text = '恢复默认'
+$resetShortcutButton.Text = T 'button.resetDefaults'
 $resetShortcutButton.Left = 236
 $resetShortcutButton.Top = 358
-$resetShortcutButton.Width = 90
+$resetShortcutButton.Width = 110
 $resetShortcutButton.Height = 36
 $resetShortcutButton.Add_Click({ Reset-ShortcutSettings })
 $buttonPanel.Controls.Add($resetShortcutButton)
 
 $reloadButton = New-Object System.Windows.Forms.Button
-$reloadButton.Text = '载入配置'
+$reloadButton.Text = T 'button.loadConfig'
 $reloadButton.Left = 334
 $reloadButton.Top = 358
-$reloadButton.Width = 90
+$reloadButton.Width = 110
 $reloadButton.Height = 36
 $reloadButton.Add_Click({
     try {
@@ -1903,47 +2184,82 @@ $reloadButton.Add_Click({
         Load-ConfigurationIntoUi
     }
     catch {
-        Set-Status ("配置读取失败：{0}" -f $_.Exception.Message) '#C0392B'
+        Set-Status (T 'status.configReadFailed' @{ message = $_.Exception.Message }) '#C0392B'
     }
 })
 $buttonPanel.Controls.Add($reloadButton)
 
 $openConfigButton = New-Object System.Windows.Forms.Button
-$openConfigButton.Text = '打开配置'
+$openConfigButton.Text = T 'button.openConfig'
 $openConfigButton.Left = 432
 $openConfigButton.Top = 358
-$openConfigButton.Width = 90
+$openConfigButton.Width = 105
 $openConfigButton.Height = 36
 $openConfigButton.Add_Click({
     Start-Process -FilePath 'notepad.exe' -ArgumentList ('"{0}"' -f $script:ConfigPath)
 })
 $buttonPanel.Controls.Add($openConfigButton)
 
+$configManagerButton = New-Object System.Windows.Forms.Button
+$configManagerButton.Text = T 'button.configManager'
+$configManagerButton.Width = 105
+$configManagerButton.Height = 36
+$configMenu = New-Object System.Windows.Forms.ContextMenuStrip
+$exportConfigMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$importConfigMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$restoreConfigMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$exportConfigMenuItem.Text = T 'button.exportConfig'
+$importConfigMenuItem.Text = T 'button.importConfig'
+$restoreConfigMenuItem.Text = T 'button.restoreBackup'
+$exportConfigMenuItem.Add_Click({ Export-ShortcutConfiguration })
+$importConfigMenuItem.Add_Click({ Import-ShortcutConfiguration })
+$restoreConfigMenuItem.Add_Click({ Restore-ShortcutConfiguration })
+[void]$configMenu.Items.Add($exportConfigMenuItem)
+[void]$configMenu.Items.Add($importConfigMenuItem)
+[void]$configMenu.Items.Add($restoreConfigMenuItem)
+$configManagerButton.ContextMenuStrip = $configMenu
+$configManagerButton.Add_Click({
+    $configMenu.Show(
+        $configManagerButton,
+        (New-Object System.Drawing.Point(0, $configManagerButton.Height)),
+        [System.Windows.Forms.ToolStripDropDownDirection]::BelowRight
+    )
+})
+$buttonPanel.Controls.Add($configManagerButton)
+
+$guideButton = New-Object System.Windows.Forms.Button
+$guideButton.Text = T 'button.userGuide'
+$guideButton.Width = 105
+$guideButton.Height = 36
+$guideButton.Add_Click({ Show-UserGuide })
+$buttonPanel.Controls.Add($guideButton)
+
 $enabledCheckBox = New-Object System.Windows.Forms.CheckBox
-$enabledCheckBox.Text = '启用快捷键'
+$enabledCheckBox.Text = T 'button.enableHotkeys'
 $enabledCheckBox.Left = 530
 $enabledCheckBox.Top = 365
-$enabledCheckBox.Width = 130
-$enabledCheckBox.AutoSize = $false
+$enabledCheckBox.Width = 140
+$enabledCheckBox.AutoSize = $true
+$enabledCheckBox.MinimumSize = New-Object System.Drawing.Size(130, 30)
 $enabledCheckBox.Checked = $true
 $enabledCheckBox.Add_CheckedChanged({
     $script:Enabled = $enabledCheckBox.Checked
     if (-not $script:Enabled) {
         Unregister-AllHotkeys
-        Set-Status '快捷键已暂停。' '#B9770E'
+        Set-Status (T 'status.paused') '#B9770E'
     }
 })
 $buttonPanel.Controls.Add($enabledCheckBox)
 
 $aboutButton = New-Object System.Windows.Forms.Button
-$aboutButton.Text = '关于'
+$aboutButton.Text = T 'button.about'
 $aboutButton.Width = 72
 $aboutButton.Height = 36
 $aboutButton.Add_Click({ Show-AboutDialog })
 $buttonPanel.Controls.Add($aboutButton)
 
 $exitButton = New-Object System.Windows.Forms.Button
-$exitButton.Text = '退出'
+$exitButton.Text = T 'button.exit'
 $exitButton.Left = 688
 $exitButton.Top = 358
 $exitButton.Width = 72
@@ -1952,7 +2268,7 @@ $exitButton.Add_Click({ $form.Close() })
 $buttonPanel.Controls.Add($exitButton)
 
 $hintLabel = New-Object System.Windows.Forms.Label
-$hintLabel.Text = '面板切换后自动刷新；通用备份使用 Ctrl+Alt+B；双击表格行可修改快捷键。'
+$hintLabel.Text = T 'status.hint' @{ backup = (Format-Binding $script:Config.commonBindings.backup) }
 $hintLabel.Left = 20
 $hintLabel.Top = 405
 $hintLabel.Width = 740
@@ -1961,12 +2277,63 @@ $hintLabel.AutoEllipsis = $true
 $hintLabel.ForeColor = [System.Drawing.Color]::FromArgb(95, 110, 125)
 $form.Controls.Add($hintLabel)
 
+function Apply-UiLanguage {
+    $form.Text = "$(T 'app.name') $($script:AppVersion)"
+    $titleLabel.Text = "$(T 'main.title')　$($script:AppVersion)"
+    $summaryLabel.Text = T 'main.summary'
+    $languageCombo.AccessibleName = T 'language.label'
+    $languageToolTip.SetToolTip($languageCombo, (T 'language.tooltip'))
+    $bindingGrid.Columns[0].HeaderText = T 'column.action'
+    $bindingGrid.Columns[1].HeaderText = T 'column.keyboard'
+    $bindingGrid.Columns[2].HeaderText = T 'column.mouse'
+    $bindingGrid.Columns[3].HeaderText = T 'column.status'
+    $calibrateButton.Text = T 'button.detect'
+    $editShortcutButton.Text = T 'button.editShortcut'
+    $resetShortcutButton.Text = T 'button.resetDefaults'
+    $reloadButton.Text = T 'button.loadConfig'
+    $openConfigButton.Text = T 'button.openConfig'
+    $configManagerButton.Text = T 'button.configManager'
+    $guideButton.Text = T 'button.userGuide'
+    $enabledCheckBox.Text = T 'button.enableHotkeys'
+    $aboutButton.Text = T 'button.about'
+    $exitButton.Text = T 'button.exit'
+    $exportConfigMenuItem.Text = T 'button.exportConfig'
+    $importConfigMenuItem.Text = T 'button.importConfig'
+    $restoreConfigMenuItem.Text = T 'button.restoreBackup'
+}
+
+$languageCombo.Add_SelectedIndexChanged({
+    if ($script:SuppressLanguageChange -or $null -eq $languageCombo.SelectedItem) {
+        return
+    }
+    $selectedLanguage = [string]$languageCombo.SelectedItem.Code
+    if ($selectedLanguage -eq $script:UiLanguage) {
+        return
+    }
+    try {
+        $script:Config = Set-ConfigLanguage -Config $script:Config -Language $selectedLanguage
+        $script:UiLanguage = $selectedLanguage
+        Write-Config
+        Apply-UiLanguage
+        Refresh-Detection
+        Set-Status (T 'status.languageChanged') '#1E8449'
+    }
+    catch {
+        Set-Status (T 'status.configReadFailed' @{ message = $_.Exception.Message }) '#C0392B'
+    }
+})
+
 function Update-MainWindowLayout {
     $metrics = Get-MainLayoutMetrics -ClientWidth $form.ClientSize.Width -ClientHeight $form.ClientSize.Height
 
     $titleLabel.Top = $metrics.TitleTop
     $titleLabel.Height = $metrics.TitleHeight
-    $titleLabel.Width = $metrics.ContentWidth
+    $titleLabel.Width = $metrics.TitleWidth
+
+    $languageCombo.Left = $metrics.LanguageSelectorLeft
+    $languageCombo.Top = $metrics.LanguageSelectorTop
+    $languageCombo.Width = $metrics.LanguageSelectorWidth
+    $languageCombo.Height = $metrics.LanguageSelectorHeight
 
     $summaryLabel.Top = $metrics.SummaryTop
     $summaryLabel.Height = $metrics.SummaryHeight
@@ -2003,7 +2370,7 @@ $form.Add_DpiChanged({
         Update-MainWindowLayout
     }
     catch {
-        Set-Status ("DPI切换后布局失败：{0}" -f $_.Exception.Message) '#C0392B'
+        Set-Status (T 'status.dpiLayoutFailed' @{ message = $_.Exception.Message }) '#C0392B'
     }
 })
 
@@ -2030,32 +2397,36 @@ $timer.Add_Tick({
             }
 
             if (-not $script:Enabled) {
-                Set-Status '快捷键已暂停。' '#B9770E'
+                Set-Status (T 'status.paused') '#B9770E'
             }
             elseif ($target -eq [IntPtr]::Zero) {
-                Set-Status '等待模方ModelFun窗口。' '#B9770E'
+                Set-Status (T 'status.waitingModelFun') '#B9770E'
             }
             elseif (-not [RoadLevel.WinApi]::IsTargetActive($target, [string]$script:Config.targetTitle)) {
-                Set-Status '快捷键待命：切换到模方ModelFun后生效。' '#1F5F99'
+                Set-Status (T 'status.standby') '#1F5F99'
             }
             elseif ($null -eq $panel) {
                 if ($script:HotkeysRegistered) {
-                    Set-Status '备份快捷键已启用；打开置平面板后会启用面板按钮。' '#1E8449'
+                    Set-Status (T 'status.backupOnly') '#1E8449'
                 }
                 else {
-                    Set-Status '备份快捷键注册失败，请检查按键冲突。' '#C0392B'
+                    Set-Status (T 'status.backupRegistrationFailed') '#C0392B'
                 }
             }
             elseif ($script:HotkeysRegistered) {
-                Set-Status ("已自动识别「{0}」，快捷键已启用。" -f $panel.Title) '#1E8449'
+                Set-Status (T 'status.detected' @{
+                    panel = (Get-LocalizedPanelTitle -PanelTitle $panel.Title -Language $script:UiLanguage)
+                }) '#1E8449'
             }
             else {
-                Set-Status ("已识别「{0}」，但快捷键注册失败，请检查按键冲突。" -f $panel.Title) '#C0392B'
+                Set-Status (T 'status.detectionFailed' @{
+                    panel = (Get-LocalizedPanelTitle -PanelTitle $panel.Title -Language $script:UiLanguage)
+                }) '#C0392B'
             }
         }
     }
     catch {
-        Set-Status ("运行错误：{0}" -f $_.Exception.Message) '#C0392B'
+        Set-Status (T 'status.runtimeError' @{ message = $_.Exception.Message }) '#C0392B'
     }
 })
 
@@ -2065,6 +2436,26 @@ $form.Add_Shown({
         Update-MainWindowLayout
         Load-ConfigurationIntoUi
         if ($script:UiSmokeTest) {
+            if (-not $titleLabel.Text.Contains((T 'main.title')) -or
+                $bindingGrid.Columns[0].HeaderText -ne (T 'column.action') -or
+                $exitButton.Text -ne (T 'button.exit') -or
+                $guideButton.Text -ne (T 'button.userGuide')) {
+                throw "UI did not apply language $($script:UiLanguage)."
+            }
+            if (-not [string]::IsNullOrWhiteSpace($UiSmokeScreenshotPath)) {
+                [System.Windows.Forms.Application]::DoEvents()
+                $bitmap = New-Object System.Drawing.Bitmap($form.Width, $form.Height)
+                try {
+                    $form.DrawToBitmap(
+                        $bitmap,
+                        (New-Object System.Drawing.Rectangle(0, 0, $form.Width, $form.Height))
+                    )
+                    $bitmap.Save($UiSmokeScreenshotPath, [System.Drawing.Imaging.ImageFormat]::Png)
+                }
+                finally {
+                    $bitmap.Dispose()
+                }
+            }
             $script:UiSmokeTestCompleted = $true
             [void]$form.BeginInvoke([System.Windows.Forms.MethodInvoker]{ $form.Close() })
             return
@@ -2096,7 +2487,7 @@ $form.Add_Shown({
         }
         [System.Windows.Forms.MessageBox]::Show(
             $_.Exception.Message,
-            '初始化失败',
+            (T 'message.initializationFailed'),
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error
         ) | Out-Null
@@ -2107,6 +2498,8 @@ $form.Add_FormClosing({
     $timer.Stop()
     Close-CalibrationOverlay
     Unregister-AllHotkeys
+    Close-SingleInstanceGuard -Guard $script:SingleInstanceGuard
+    $script:SingleInstanceGuard = $null
     $script:MainForm = $null
 })
 
@@ -2115,11 +2508,11 @@ $form.Add_FormClosing({
 if ($script:UiSmokeTest) {
     $form.Dispose()
     if ($script:UiSmokeTestCompleted -and [string]::IsNullOrWhiteSpace($script:UiSmokeTestError)) {
-        Write-Output 'PASS Windows PowerShell UI initialization completes without errors'
+        Write-Output ("PASS Windows PowerShell UI initialization ({0}) completes without errors" -f $script:UiLanguage)
         exit 0
     }
     $message = if ([string]::IsNullOrWhiteSpace($script:UiSmokeTestError)) {
-        '主窗口未完成初始化'
+        Get-UiText -Key 'message.initializationIncomplete' -Language $script:UiLanguage
     }
     else {
         $script:UiSmokeTestError

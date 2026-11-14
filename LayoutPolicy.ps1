@@ -5,7 +5,13 @@
     )
 
     $contentWidth = [Math]::Max(520, $ClientWidth - 40)
+    $languageSelectorWidth = 132
+    $languageSelectorGap = 12
+    $titleWidth = $contentWidth - $languageSelectorWidth - $languageSelectorGap
+    $languageSelectorLeft = 20 + $titleWidth + $languageSelectorGap
+    $languageSelectorHeight = 34
     $titleTop = 16
+    $languageSelectorTop = $titleTop + 2
     $titleHeight = 38
     $summaryTop = 64
     $summaryHeight = 44
@@ -22,6 +28,11 @@
 
     return [pscustomobject]@{
         ContentWidth = $contentWidth
+        TitleWidth = $titleWidth
+        LanguageSelectorLeft = $languageSelectorLeft
+        LanguageSelectorTop = $languageSelectorTop
+        LanguageSelectorWidth = $languageSelectorWidth
+        LanguageSelectorHeight = $languageSelectorHeight
         TitleTop = $titleTop
         TitleHeight = $titleHeight
         SummaryTop = $summaryTop

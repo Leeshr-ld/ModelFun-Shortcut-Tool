@@ -54,7 +54,8 @@ Invoke-Test 'V1.1共享绑定迁移为四个面板独立绑定' {
     }
 
     $actual = ConvertTo-V4ShortcutConfig -Config $legacy
-    Assert-Equal 4 $actual.version '迁移后版本错误'
+    Assert-Equal 5 $actual.version '迁移后版本错误'
+    Assert-Equal 'zh-CN' $actual.language '迁移后默认语言错误'
     Assert-Equal 'Q' $actual.commonBindings.backup.key '通用备份未迁移'
     Assert-Equal 'F9' $actual.panelBindings.'道路置平'.slot1.key '道路置平未迁移'
     Assert-Equal 'F9' $actual.panelBindings.'表面置平'.slot1.key '表面置平未获得旧绑定'
@@ -109,6 +110,33 @@ Invoke-Test '全局备份不能与任何面板按钮重复' {
     $actual = Find-GlobalBackupConflict -Candidate $candidate -Config $config -ModelConflicts @()
     Assert-Equal 'Internal' $actual.Kind '全局备份未检查全部面板'
     Assert-True ($actual.Message.Contains('道路置平')) '冲突信息未指出面板名称'
+}
+
+Invoke-Test '默认配置使用V5并默认中文' {
+    $config = New-DefaultShortcutConfig -TargetTitle '模方ModelFun'
+    Assert-Equal 5 $config.version '默认配置版本错误'
+    Assert-Equal 'zh-CN' $config.language '默认语言错误'
+}
+
+Invoke-Test 'V4配置迁移保留快捷键并增加语言字段' {
+    $config = New-DefaultShortcutConfig -TargetTitle '模方ModelFun'
+    $config.version = 4
+    $config | Add-Member -NotePropertyName language -NotePropertyValue $null -Force
+    $config.panelBindings.'道路置平'.slot1.key = 'F9'
+
+    $actual = ConvertTo-V5ShortcutConfig -Config $config
+    Assert-Equal 5 $actual.version '迁移后配置版本错误'
+    Assert-Equal 'zh-CN' $actual.language '未获得默认语言'
+    Assert-Equal 'F9' $actual.panelBindings.'道路置平'.slot1.key '迁移丢失快捷键'
+}
+
+Invoke-Test '语言设置可独立更新且不影响快捷键' {
+    $config = New-DefaultShortcutConfig -TargetTitle '模方ModelFun'
+    $config.panelBindings.'补洞'.cancel.key = 'F8'
+
+    $actual = Set-ConfigLanguage -Config $config -Language 'en-US'
+    Assert-Equal 'en-US' $actual.language '语言未更新'
+    Assert-Equal 'F8' $actual.panelBindings.'补洞'.cancel.key '语言更新修改了快捷键'
 }
 
 Write-Output "SUMMARY passed=$script:Passed failed=$script:Failed"

@@ -35,6 +35,10 @@ jobs:
           & .\tests\Test-BackupWorkflow.ps1
           & .\tests\Test-VersionInfo.ps1
           & .\tests\Test-LayoutPolicy.ps1
+          & .\tests\Test-Localization.ps1
+          & .\tests\Test-ConfigStorage.ps1
+          & .\tests\Test-SingleInstance.ps1
+          & .\tests\Test-UserGuide.ps1
           & .\tests\Test-DpiAwareness.ps1
           & .\tests\Test-ReleasePackage.ps1
 
