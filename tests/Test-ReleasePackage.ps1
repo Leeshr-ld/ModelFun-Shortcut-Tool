@@ -77,7 +77,7 @@ try {
         throw '发行包缺少V1.1顶层目录'
     }
 
-    if ([string]$config.bindings.backup.key -ne 'B') {
+    if ([string]$config.commonBindings.backup.key -ne 'B') {
         throw '发行包未使用默认备份快捷键B'
     }
 

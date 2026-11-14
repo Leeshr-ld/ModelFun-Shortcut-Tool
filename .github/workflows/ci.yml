@@ -31,6 +31,7 @@ jobs:
         shell: pwsh
         run: |
           & .\tests\Test-ShortcutRules.ps1
+          & .\tests\Test-PanelBindings.ps1
           & .\tests\Test-BackupWorkflow.ps1
           & .\tests\Test-VersionInfo.ps1
           & .\tests\Test-LayoutPolicy.ps1

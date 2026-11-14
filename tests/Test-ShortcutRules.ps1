@@ -82,10 +82,11 @@ Invoke-Test '恢复默认保留目标标题并替换全部绑定' {
     }
     $actual = Reset-ShortcutBindings -Config $changed
     Assert-Equal '测试模方' $actual.targetTitle '重置后目标标题未保留'
-    Assert-Equal '1' $actual.bindings.slot1.key 'slot1未恢复默认'
-    Assert-Equal 'Z' $actual.bindings.undo.key '撤销未恢复默认'
-    Assert-Equal 'XButton1' $actual.bindings.undo.mouseButton '撤销鼠标键未恢复默认'
-    Assert-Equal 15 @($actual.bindings.PSObject.Properties).Count '默认绑定数量错误'
+    Assert-Equal 'B' $actual.commonBindings.backup.key '通用备份未恢复默认'
+    Assert-Equal '1' $actual.panelBindings.'道路置平'.slot1.key '道路置平slot1未恢复默认'
+    Assert-Equal '1' $actual.panelBindings.'表面置平'.slot1.key '表面置平slot1未恢复默认'
+    Assert-Equal 'Z' $actual.panelBindings.'补洞'.undo.key '补洞撤销未恢复默认'
+    Assert-Equal 'XButton1' $actual.panelBindings.'补洞'.undo.mouseButton '撤销鼠标键未恢复默认'
 }
 
 Invoke-Test '同时返回键盘和鼠标冲突不发生动态绑定异常' {

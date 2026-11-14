@@ -184,8 +184,161 @@ function Get-DefaultBindings {
     }
 }
 
+function Get-PanelActionNames([string]$PanelTitle) {
+    switch ($PanelTitle) {
+        '道路置平' { return @('slot1', 'undo', 'redo', 'confirm', 'cancel') }
+        '表面置平' { return @('slot1', 'slot2', 'undo', 'redo', 'confirm', 'cancel') }
+        '指定置平' { return @('slot1', 'slot2', 'slot3', 'slot4', 'undo', 'redo', 'toggle1', 'toggle2', 'confirm', 'cancel') }
+        '补洞' { return @('slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6', 'undo', 'redo', 'confirm', 'cancel') }
+        default { throw "未知面板：$PanelTitle" }
+    }
+}
+
+function Get-PanelTitles {
+    return @('道路置平', '表面置平', '指定置平', '补洞')
+}
+
+function New-DefaultShortcutConfig([string]$TargetTitle) {
+    $catalog = Get-DefaultBindings
+    $commonBindings = [pscustomobject]@{
+        backup = $catalog.backup.PSObject.Copy()
+    }
+
+    $panelMap = [ordered]@{}
+    foreach ($panelTitle in Get-PanelTitles) {
+        $panelEntries = [ordered]@{}
+        foreach ($actionName in Get-PanelActionNames $panelTitle) {
+            $panelEntries[$actionName] = $catalog.$actionName.PSObject.Copy()
+        }
+        $panelMap[$panelTitle] = [pscustomobject]$panelEntries
+    }
+
+    return [pscustomobject]@{
+        version = 4
+        targetTitle = $TargetTitle
+        commonBindings = $commonBindings
+        panelBindings = [pscustomobject]$panelMap
+    }
+}
+
+function ConvertTo-V4ShortcutConfig($Config) {
+    if ($null -eq $Config) {
+        throw '配置不能为空。'
+    }
+
+    $targetTitle = if ($Config.PSObject.Properties['targetTitle']) { [string]$Config.targetTitle } else { '模方ModelFun' }
+    if ([int]$Config.version -eq 4 -and
+        $Config.PSObject.Properties['commonBindings'] -and
+        $Config.PSObject.Properties['panelBindings']) {
+        $defaults = New-DefaultShortcutConfig -TargetTitle $targetTitle
+        foreach ($property in $defaults.commonBindings.PSObject.Properties) {
+            if (-not $Config.commonBindings.PSObject.Properties[$property.Name]) {
+                $Config.commonBindings | Add-Member -NotePropertyName $property.Name -NotePropertyValue $property.Value.PSObject.Copy()
+            }
+        }
+        foreach ($panelTitle in Get-PanelTitles) {
+            if (-not $Config.panelBindings.PSObject.Properties[$panelTitle]) {
+                $Config.panelBindings | Add-Member -NotePropertyName $panelTitle -NotePropertyValue $defaults.panelBindings.PSObject.Properties[$panelTitle].Value
+            }
+            foreach ($actionName in Get-PanelActionNames $panelTitle) {
+                if (-not $Config.panelBindings.PSObject.Properties[$panelTitle].Value.PSObject.Properties[$actionName]) {
+                    $Config.panelBindings.PSObject.Properties[$panelTitle].Value | Add-Member -NotePropertyName $actionName -NotePropertyValue $defaults.panelBindings.PSObject.Properties[$panelTitle].Value.PSObject.Properties[$actionName].Value.PSObject.Copy()
+                }
+            }
+        }
+        return $Config
+    }
+
+    $migrated = New-DefaultShortcutConfig -TargetTitle $targetTitle
+    $legacyBindings = if ($Config.PSObject.Properties['bindings']) { $Config.bindings } else { $null }
+
+    if ($null -ne $legacyBindings -and $legacyBindings.PSObject.Properties['backup']) {
+        $migrated.commonBindings.backup = $legacyBindings.backup.PSObject.Copy()
+    }
+
+    if ($null -ne $legacyBindings) {
+        foreach ($panelTitle in Get-PanelTitles) {
+            foreach ($actionName in Get-PanelActionNames $panelTitle) {
+                if ($legacyBindings.PSObject.Properties[$actionName]) {
+                    $migrated.panelBindings.PSObject.Properties[$panelTitle].Value.PSObject.Properties[$actionName].Value =
+                        $legacyBindings.PSObject.Properties[$actionName].Value.PSObject.Copy()
+                }
+            }
+        }
+    }
+
+    return $migrated
+}
+
+function Get-PanelBindings($Config, [string]$PanelTitle) {
+    if (-not $Config.PSObject.Properties['panelBindings'] -or
+        -not $Config.panelBindings.PSObject.Properties[$PanelTitle]) {
+        return $null
+    }
+    return $Config.panelBindings.PSObject.Properties[$PanelTitle].Value
+}
+
+function Get-ActionBinding($Config, [string]$PanelTitle, [string]$ActionName) {
+    if ([string]::IsNullOrWhiteSpace($PanelTitle) -or $ActionName -eq 'backup') {
+        if ($Config.commonBindings.PSObject.Properties[$ActionName]) {
+            return $Config.commonBindings.PSObject.Properties[$ActionName].Value
+        }
+        return $null
+    }
+
+    $panelBindings = Get-PanelBindings -Config $Config -PanelTitle $PanelTitle
+    if ($null -eq $panelBindings) {
+        return $null
+    }
+    if ($panelBindings.PSObject.Properties[$ActionName]) {
+        return $panelBindings.PSObject.Properties[$ActionName].Value
+    }
+    return $null
+}
+
+function Set-ActionBinding($Config, [string]$PanelTitle, [string]$ActionName, $Binding) {
+    if ([string]::IsNullOrWhiteSpace($PanelTitle) -or $ActionName -eq 'backup') {
+        $Config.commonBindings.PSObject.Properties[$ActionName].Value = $Binding
+    }
+    else {
+        $Config.panelBindings.PSObject.Properties[$PanelTitle].Value.PSObject.Properties[$ActionName].Value = $Binding
+    }
+    return $Config
+}
+
+function Get-ConflictScopeBindings($Config, [string]$PanelTitle) {
+    $scope = [ordered]@{
+        backup = $Config.commonBindings.backup
+    }
+    $panelBindings = Get-PanelBindings -Config $Config -PanelTitle $PanelTitle
+    if ($null -ne $panelBindings) {
+        foreach ($property in $panelBindings.PSObject.Properties) {
+            $scope[$property.Name] = $property.Value
+        }
+    }
+    return [pscustomobject]$scope
+}
+
+function Find-GlobalBackupConflict {
+    param(
+        $Candidate,
+        $Config,
+        $ModelConflicts
+    )
+
+    foreach ($panelTitle in Get-PanelTitles) {
+        $panelBindings = Get-PanelBindings -Config $Config -PanelTitle $panelTitle
+        $conflict = Find-ShortcutConflict -ActionName 'backup' -Candidate $Candidate -Bindings $panelBindings -ModelConflicts @()
+        if ($null -ne $conflict) {
+            $conflict.Message = "与「$panelTitle」面板动作「$($conflict.ActionName)」的快捷键重复。"
+            return $conflict
+        }
+    }
+
+    return Find-ShortcutConflict -ActionName 'backup' -Candidate $Candidate -Bindings $null -ModelConflicts $ModelConflicts
+}
+
 function Reset-ShortcutBindings($Config) {
-    $result = $Config.PSObject.Copy()
-    $result.bindings = Get-DefaultBindings
-    return $result
+    $targetTitle = if ($Config.PSObject.Properties['targetTitle']) { [string]$Config.targetTitle } else { '模方ModelFun' }
+    return New-DefaultShortcutConfig -TargetTitle $targetTitle
 }
