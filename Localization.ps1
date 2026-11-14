@@ -117,6 +117,19 @@ function Get-UiTextMap([string]$Language) {
             'guide.notFoundTitle' = 'User Guide Not Found'
             'guide.notFoundBody' = '用户指南.html is missing. Extract the complete portable ZIP and try again.'
             'guide.openFailed' = 'The user guide could not be opened: {message}'
+            'error.configFileNotFound' = 'Configuration file was not found: {path}'
+            'error.invalidConfigJson' = 'The configuration JSON is invalid.'
+            'error.noValidConfigBackup' = 'No valid configuration backup is available for recovery.'
+            'error.configEmpty' = 'Configuration cannot be empty.'
+            'error.configValidation' = 'Configuration did not pass validation.'
+            'error.targetWindow' = 'The configuration target is not ModelFun: {target}'
+            'error.bindingShape' = 'Shortcut binding structure is invalid: {name}'
+            'error.bindingField' = 'Shortcut binding is missing field {field}: {name}'
+            'error.booleanField' = 'Shortcut boolean field is invalid: {name}/{field}'
+            'error.keyType' = 'Shortcut key field has an invalid type: {name}/key'
+            'error.unsupportedMouse' = 'Unsupported mouse shortcut: {name}/{mouse}'
+            'error.unboundShortcut' = 'Shortcut has no binding: {name}'
+            'error.unsupportedLanguage' = 'Unsupported language: {language}'
             'message.bindingRequired' = 'Bind at least one keyboard or mouse shortcut.'
             'message.cannotSave' = 'Cannot Save'
             'message.shortcutDuplicate' = 'Duplicate Shortcut'
@@ -247,6 +260,19 @@ function Get-UiTextMap([string]$Language) {
         'guide.notFoundTitle' = '未找到使用指南'
         'guide.notFoundBody' = '缺少“用户指南.html”。请重新解压完整便携包后再试。'
         'guide.openFailed' = '无法打开使用指南：{message}'
+        'error.configFileNotFound' = '配置文件不存在：{path}'
+        'error.invalidConfigJson' = '配置文件的JSON格式无效。'
+        'error.noValidConfigBackup' = '没有可恢复的有效配置备份。'
+        'error.configEmpty' = '配置不能为空。'
+        'error.configValidation' = '配置未通过校验。'
+        'error.targetWindow' = '配置目标窗口不是ModelFun：{target}'
+        'error.bindingShape' = '快捷键绑定结构错误：{name}'
+        'error.bindingField' = '快捷键绑定缺少字段：{name}/{field}'
+        'error.booleanField' = '快捷键布尔字段错误：{name}/{field}'
+        'error.keyType' = '快捷键字段类型错误：{name}/key'
+        'error.unsupportedMouse' = '不支持的鼠标快捷键：{name}/{mouse}'
+        'error.unboundShortcut' = '快捷键未绑定：{name}'
+        'error.unsupportedLanguage' = '不支持的语言：{language}'
         'message.bindingRequired' = '键盘和鼠标至少需要绑定一个。'
         'message.cannotSave' = '无法保存'
         'message.shortcutDuplicate' = '快捷键重复'
@@ -295,6 +321,41 @@ function Get-UiText {
         $text = $text.Replace('{' + $token + '}', [string]$Tokens[$token])
     }
     return $text
+}
+
+function New-UiException {
+    param(
+        [string]$Key,
+        [string]$FallbackMessage,
+        [hashtable]$Tokens = @{}
+    )
+
+    $exception = New-Object System.Exception($FallbackMessage)
+    $exception.Data['UiKey'] = $Key
+    $exception.Data['UiTokens'] = $Tokens
+    return $exception
+}
+
+function Format-UiException {
+    param(
+        $Exception,
+        [string]$Language = 'zh-CN'
+    )
+
+    $current = $Exception
+    while ($null -ne $current) {
+        if ($current.Data -and $current.Data['UiKey']) {
+            return Get-UiText `
+                -Key ([string]$current.Data['UiKey']) `
+                -Language $Language `
+                -Tokens ([hashtable]$current.Data['UiTokens'])
+        }
+        $current = $current.InnerException
+    }
+    if ($null -eq $Exception) {
+        return (Get-UiText -Key 'error.configValidation' -Language $Language)
+    }
+    return [string]$Exception.Message
 }
 
 function Get-LocalizedPanelTitle {

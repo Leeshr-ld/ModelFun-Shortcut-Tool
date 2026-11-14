@@ -23,13 +23,16 @@ try {
         throw "发行包没有生成EXE：$exePath"
     }
     $exeVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($exePath).FileVersion
-    if ($exeVersion -ne '1.3.0.0') {
+    if ($exeVersion -ne '1.3.1.0') {
         throw "EXE文件版本错误：$exeVersion"
     }
 
     $archive = [System.IO.Compression.ZipFile]::OpenRead($result.ZipPath)
     try {
         $names = @($archive.Entries | ForEach-Object FullName)
+        if ($names.Count -ne 19) {
+            throw "发行包文件数量错误：$($names.Count)，期望19"
+        }
         $configEntry = $archive.Entries | Where-Object { $_.FullName -like '*/config.json' } | Select-Object -First 1
         if ($null -eq $configEntry) {
             throw '发行包缺少config.json'
@@ -40,6 +43,36 @@ try {
         }
         finally {
             $reader.Dispose()
+        }
+        $manifestEntry = $archive.Entries | Where-Object { $_.FullName -like '*/runtime.sha256' } | Select-Object -First 1
+        if ($null -eq $manifestEntry) {
+            throw '发行包缺少runtime.sha256'
+        }
+        $reader = New-Object System.IO.StreamReader($manifestEntry.Open(), [System.Text.Encoding]::UTF8)
+        try {
+            $manifestText = $reader.ReadToEnd()
+        }
+        finally {
+            $reader.Dispose()
+        }
+        $manifestPaths = @(
+            $manifestText -split "`r?`n" |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                ForEach-Object {
+                    if ($_ -notmatch '^[0-9A-Fa-f]{64}  (.+)$') {
+                        throw "runtime.sha256格式错误：$_"
+                    }
+                    $Matches[1]
+                }
+        )
+        $expectedProtected = @(
+            $names |
+                ForEach-Object { ($_ -split '[\\/]')[-1] } |
+                Where-Object { $_ -notin @('RoadLevelHotkeys.exe', 'config.json', 'runtime.sha256') }
+        )
+        $missingProtected = @($expectedProtected | Where-Object { $_ -notin $manifestPaths })
+        if ($missingProtected.Count -gt 0) {
+            throw "完整性清单遗漏文件：$($missingProtected -join ', ')"
         }
     }
     finally {
@@ -53,6 +86,7 @@ try {
         'Localization.ps1',
         'ConfigStorage.ps1',
         'SingleInstance.ps1',
+        'runtime.sha256',
         '用户指南.html',
         'config.json',
         'ShortcutRules.ps1',
@@ -86,8 +120,8 @@ try {
         }
     }
 
-    if (-not ($names | Where-Object { $_ -like '*模方面板快捷键助手_V1.3.0/*' })) {
-        throw '发行包缺少V1.3.0顶层目录'
+    if (-not ($names | Where-Object { $_ -like '*模方面板快捷键助手_V1.3.1/*' })) {
+        throw '发行包缺少V1.3.1顶层目录'
     }
 
     if ([string]$config.commonBindings.backup.key -ne 'B') {

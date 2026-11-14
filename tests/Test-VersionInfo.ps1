@@ -40,9 +40,9 @@ function Invoke-Test([string]$Name, [scriptblock]$Body) {
 
 Invoke-Test '当前版本作者和版本链正确' {
     $actual = Get-AppVersionInfo -Path $dataPath
-    Assert-Equal 'V1.3.0' $actual.version '当前版本错误'
+    Assert-Equal 'V1.3.1' $actual.version '当前版本错误'
     Assert-Equal 'shijye' $actual.author '作者错误'
-    Assert-Equal 'V1.3.0|V1.2.0|V1.1|V1.0|V0.0' (($actual.history | ForEach-Object version) -join '|') '版本历史顺序错误'
+    Assert-Equal 'V1.3.1|V1.3.0|V1.2.0|V1.1|V1.0|V0.0' (($actual.history | ForEach-Object version) -join '|') '版本历史顺序错误'
 }
 
 Invoke-Test '关于文本包含GPL-3.0开源许可' {
@@ -50,7 +50,7 @@ Invoke-Test '关于文本包含GPL-3.0开源许可' {
     $actual = Get-AboutText -Info $info
     Assert-Contains $actual 'shijye' '关于文本缺少作者'
     Assert-Contains $actual 'GPL-3.0' '关于文本缺少开源许可证'
-    Assert-Contains $actual 'V1.3.0' '关于文本缺少当前版本'
+    Assert-Contains $actual 'V1.3.1' '关于文本缺少当前版本'
     Assert-Contains $actual 'V0.0' '关于文本缺少原始版本'
     if ($actual.Contains('禁止商业化销售')) {
         throw '完全开源版本仍包含禁止商业化条款'
@@ -62,7 +62,7 @@ Invoke-Test '关于文本支持英文版本历史' {
     $actual = Get-AboutText -Info $info -Language 'en-US'
     Assert-Contains $actual 'Author: shijye' '英文关于文本缺少作者'
     Assert-Contains $actual 'Version History' '英文关于文本缺少版本历史标题'
-    Assert-Contains $actual 'Current version: V1.3.0' '英文关于文本缺少当前版本'
+    Assert-Contains $actual 'Current version: V1.3.1' '英文关于文本缺少当前版本'
     if ($actual.Contains('版本历史')) {
         throw '英文关于文本仍包含中文版本历史标题'
     }

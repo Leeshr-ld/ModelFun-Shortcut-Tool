@@ -1,11 +1,39 @@
 {
-  "version": "V1.3.0",
+  "version": "V1.3.1",
   "author": "shijye",
   "license": "GPL-3.0-only",
   "copyright": "Copyright (C) 2026 shijye. All rights reserved.",
   "licenseNotice": "本软件采用 GNU General Public License v3.0（GPL-3.0）完全开源。你可以运行、研究、修改和再分发本软件，也可以用于商业用途；分发修改版时必须遵守 GPL-3.0，提供完整对应源码并保留许可证和作者署名。",
   "licenseNoticeEn": "This software is fully open source under GNU GPL v3.0. You may run, study, modify, redistribute, and use it commercially. Modified distributions must comply with GPL-3.0, include the complete corresponding source code, and preserve the license and author credit.",
   "history": [
+    {
+      "version": "V1.3.1",
+      "date": "2026-11-14",
+      "changes": [
+        "新增运行时完整性清单runtime.sha256；启动器内置清单SHA256并在管理员执行前校验全部可执行资源，防止脚本被替换后继续以管理员权限运行。",
+        "新增脚本化启动器构建流程，生成完整性清单、固定清单哈希并编译EXE。",
+        "新增严格配置Schema校验：拒绝非ModelFun目标窗口、错误字段类型、不支持的鼠标键和空绑定。",
+        "配置恢复会从新到旧寻找第一份JSON和Schema均有效的备份，不再被损坏的最新备份阻塞。",
+        "配置保存和恢复统一使用同目录临时文件加替换写入，降低写入中断导致config.json损坏的风险。",
+        "合法JSON但结构错误的配置现在也会触发自动恢复。",
+        "单实例锁提前到配置加载之前，避免同时启动时发生配置写入竞争。",
+        "配置、Schema和快捷键模块错误增加本地化错误键，English界面不再直接显示中文异常原文。",
+        "图形指南在浏览器禁用localStorage时仍可切换语言，打印结束后恢复折叠项状态。",
+        "新增运行时完整性、配置回退、Schema校验、跨进程单实例和双语异常测试。"
+      ],
+      "changesEn": [
+        "Added a runtime integrity manifest and a launcher-pinned manifest hash to verify every executable resource before an elevated PowerShell process starts, preventing modified scripts from running with administrator rights.",
+        "Added a scripted launcher build workflow that generates the integrity manifest, pins its hash, and compiles the EXE.",
+        "Added strict configuration schema validation that rejects non-ModelFun targets, invalid field types, unsupported mouse buttons, and empty bindings.",
+        "Configuration recovery now scans backups newest-to-oldest for the first JSON and schema-valid backup instead of being blocked by a damaged newest file.",
+        "Configuration save and restore now use a same-directory temporary file followed by replacement, reducing the risk of a partial config.json after an interrupted write.",
+        "Valid JSON with an invalid configuration structure now also triggers automatic recovery.",
+        "The single-instance guard is acquired before configuration loading, preventing write races during simultaneous launches.",
+        "Configuration, schema, and shortcut module errors now use localized error keys so the English interface no longer exposes raw Chinese exception text.",
+        "The visual guide keeps language switching usable when localStorage is disabled and restores accordion state after printing.",
+        "Added tests for runtime integrity, backup fallback, schema validation, cross-process single-instance behavior, and bilingual errors."
+      ]
+    },
     {
       "version": "V1.3.0",
       "date": "2026-11-14",

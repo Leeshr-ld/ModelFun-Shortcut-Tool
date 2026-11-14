@@ -39,6 +39,8 @@ jobs:
           & .\tests\Test-ConfigStorage.ps1
           & .\tests\Test-SingleInstance.ps1
           & .\tests\Test-UserGuide.ps1
+          & .\tests\Test-RuntimeIntegrity.ps1
+          & .\tests\Test-StartupFailure.ps1
           & .\tests\Test-DpiAwareness.ps1
           & .\tests\Test-ReleasePackage.ps1
 

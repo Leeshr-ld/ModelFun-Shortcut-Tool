@@ -9,9 +9,9 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("shijye")]
 [assembly: AssemblyProduct("模方面板快捷键助手")]
 [assembly: AssemblyCopyright("Copyright (C) 2026 shijye. All rights reserved.")]
-[assembly: AssemblyInformationalVersion("V1.3.0")]
-[assembly: AssemblyFileVersion("1.3.0.0")]
-[assembly: AssemblyVersion("1.3.0.0")]
+[assembly: AssemblyInformationalVersion("V1.3.1")]
+[assembly: AssemblyFileVersion("1.3.1.0")]
+[assembly: AssemblyVersion("1.3.1.0")]
 
 internal static class Program
 {
@@ -26,6 +26,27 @@ internal static class Program
             MessageBox.Show(
                 "未找到 RoadLevelHotkeys.ps1。请把 exe 和 ps1 文件放在同一目录。",
                 "模方面板快捷键助手",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return 1;
+        }
+
+        string integrityError;
+        try
+        {
+            integrityError = RoadLevel.RuntimeIntegrity.Verify(appDirectory);
+        }
+        catch (Exception ex)
+        {
+            integrityError = "runtime.sha256|verification-error|" + ex.GetType().Name;
+        }
+        if (!String.IsNullOrWhiteSpace(integrityError))
+        {
+            MessageBox.Show(
+                "运行文件完整性校验失败。请重新解压完整发行包。\r\n" +
+                "Runtime integrity check failed. Extract the complete release package again.\r\n\r\n" +
+                integrityError,
+                "模方面板快捷键助手 / ModelFun Shortcut Tool",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
             return 1;

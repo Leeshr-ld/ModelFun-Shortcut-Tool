@@ -93,4 +93,21 @@ if ((Get-LocalizedActionLabel -Label '备份当前工程瓦片' -Language 'en-US
     throw 'English action label is incorrect'
 }
 
+if (-not (Get-Command New-UiException -ErrorAction SilentlyContinue) -or
+    -not (Get-Command Format-UiException -ErrorAction SilentlyContinue)) {
+    throw 'Missing localized exception helpers'
+}
+$localizedException = New-UiException `
+    -Key 'error.noValidConfigBackup' `
+    -FallbackMessage '没有可恢复的有效配置备份。' `
+    -Tokens @{}
+$englishError = Format-UiException -Exception $localizedException -Language 'en-US'
+$chineseError = Format-UiException -Exception $localizedException -Language 'zh-CN'
+if ($englishError -ne 'No valid configuration backup is available for recovery.') {
+    throw "English config error is incorrect: $englishError"
+}
+if ($chineseError -ne '没有可恢复的有效配置备份。') {
+    throw "Chinese config error is incorrect: $chineseError"
+}
+
 Write-Output 'PASS localization resources, language fallback and display mappings'

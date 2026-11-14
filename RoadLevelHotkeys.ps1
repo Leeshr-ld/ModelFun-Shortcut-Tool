@@ -521,11 +521,17 @@ function T([string]$Key, [hashtable]$Tokens = @{}) {
     return Get-UiText -Key $Key -Language $script:UiLanguage -Tokens $Tokens
 }
 
+$script:ConfigValidator = {
+    param($Config)
+    ConvertTo-ValidatedShortcutConfig -Config $Config
+}
+
 function Write-Config {
     $null = Save-ConfigFile `
         -ConfigPath $script:ConfigPath `
         -Config $script:Config `
-        -BackupDirectory $script:ConfigBackupDirectory
+        -BackupDirectory $script:ConfigBackupDirectory `
+        -Validator $script:ConfigValidator
 }
 
 function Write-DiagnosticLog([string]$message) {
@@ -542,21 +548,23 @@ function Get-DefaultConfig {
 
 function Load-Config {
     if (-not (Test-Path -LiteralPath $script:ConfigPath)) {
-        $script:Config = Get-DefaultConfig
+        $script:Config = & $script:ConfigValidator (Get-DefaultConfig)
+        $loadedVersion = 5
         Write-Config
     }
     else {
         $loadedConfig = Read-ConfigFileWithRecovery `
             -ConfigPath $script:ConfigPath `
-            -BackupDirectory $script:ConfigBackupDirectory
+            -BackupDirectory $script:ConfigBackupDirectory `
+            -Validator $script:ConfigValidator
         $script:Config = $loadedConfig.Config
+        $loadedVersion = [int]$loadedConfig.SourceVersion
         if ($loadedConfig.Restored) {
             $script:ConfigRecoveryNotice = "RECOVERED_FROM=$($loadedConfig.RestoredFrom)"
         }
     }
 
-    $loadedVersion = if ($script:Config.PSObject.Properties['version']) { [int]$script:Config.version } else { 0 }
-    $script:Config = ConvertTo-V5ShortcutConfig -Config $script:Config
+    $script:Config = & $script:ConfigValidator $script:Config
     if ($loadedVersion -lt 5) {
         Write-Config
     }
@@ -1644,7 +1652,7 @@ function Export-ShortcutConfiguration {
     }
     catch {
         [System.Windows.Forms.MessageBox]::Show(
-            (T 'config.exportFailed' @{ message = $_.Exception.Message }),
+            (T 'config.exportFailed' @{ message = (Format-UiException -Exception $_.Exception -Language $script:UiLanguage) }),
             (T 'button.exportConfig'),
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error
@@ -1671,7 +1679,7 @@ function Import-ShortcutConfiguration {
             -BackupDirectory $script:ConfigBackupDirectory `
             -Validator {
                 param($candidate)
-                ConvertTo-V5ShortcutConfig -Config $candidate
+                ConvertTo-ValidatedShortcutConfig -Config $candidate
             } | Out-Null
         Unregister-AllHotkeys
         Load-ConfigurationIntoUi
@@ -1679,7 +1687,7 @@ function Import-ShortcutConfiguration {
     }
     catch {
         [System.Windows.Forms.MessageBox]::Show(
-            (T 'config.importFailed' @{ message = $_.Exception.Message }),
+            (T 'config.importFailed' @{ message = (Format-UiException -Exception $_.Exception -Language $script:UiLanguage) }),
             (T 'button.importConfig'),
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error
@@ -1715,14 +1723,15 @@ function Restore-ShortcutConfiguration {
     try {
         $null = Restore-LatestConfigFile `
             -ConfigPath $script:ConfigPath `
-            -BackupDirectory $script:ConfigBackupDirectory
+            -BackupDirectory $script:ConfigBackupDirectory `
+            -Validator $script:ConfigValidator
         Unregister-AllHotkeys
         Load-ConfigurationIntoUi
         Set-Status (T 'config.restoreSuccess') '#1E8449'
     }
     catch {
         [System.Windows.Forms.MessageBox]::Show(
-            (T 'config.restoreFailed' @{ message = $_.Exception.Message }),
+            (T 'config.restoreFailed' @{ message = (Format-UiException -Exception $_.Exception -Language $script:UiLanguage) }),
             (T 'config.restoreTitle'),
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error
@@ -1748,7 +1757,7 @@ function Show-UserGuide {
     }
     catch {
         [System.Windows.Forms.MessageBox]::Show(
-            (T 'guide.openFailed' @{ message = $_.Exception.Message }),
+            (T 'guide.openFailed' @{ message = (Format-UiException -Exception $_.Exception -Language $script:UiLanguage) }),
             (T 'guide.notFoundTitle'),
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error
@@ -1975,29 +1984,48 @@ if ($SelfTest) {
         exit 0
 }
 
-Load-Config
-
-if (-not $SelfTest -and -not $script:UiSmokeTest) {
-    $script:SingleInstanceGuard = New-SingleInstanceGuard -Name 'RoadLevelHotkeys-shijye'
-    if (-not $script:SingleInstanceGuard.Created) {
-        $existingWindow = [IntPtr]::Zero
-        for ($attempt = 0; $attempt -lt 20 -and $existingWindow -eq [IntPtr]::Zero; $attempt++) {
-            foreach ($titleFragment in @('模方面板快捷键助手', 'ModelFun Shortcut Tool')) {
-                $existingWindow = [RoadLevel.WinApi]::FindWindowContaining($titleFragment)
-                if ($existingWindow -ne [IntPtr]::Zero) {
-                    break
+try {
+    if (-not $SelfTest -and -not $script:UiSmokeTest) {
+        $script:SingleInstanceGuard = New-SingleInstanceGuard -Name 'RoadLevelHotkeys-shijye'
+        if (-not $script:SingleInstanceGuard.Created) {
+            $existingWindow = [IntPtr]::Zero
+            for ($attempt = 0; $attempt -lt 20 -and $existingWindow -eq [IntPtr]::Zero; $attempt++) {
+                foreach ($titleFragment in @('模方面板快捷键助手', 'ModelFun Shortcut Tool')) {
+                    $existingWindow = [RoadLevel.WinApi]::FindWindowContaining($titleFragment)
+                    if ($existingWindow -ne [IntPtr]::Zero) {
+                        break
+                    }
+                }
+                if ($existingWindow -eq [IntPtr]::Zero) {
+                    Start-Sleep -Milliseconds 100
                 }
             }
-            if ($existingWindow -eq [IntPtr]::Zero) {
-                Start-Sleep -Milliseconds 100
+            if ($existingWindow -ne [IntPtr]::Zero) {
+                [RoadLevel.WinApi]::ActivateWindow($existingWindow)
             }
+            Close-SingleInstanceGuard -Guard $script:SingleInstanceGuard
+            $script:SingleInstanceGuard = $null
+            exit 0
         }
-        if ($existingWindow -ne [IntPtr]::Zero) {
-            [RoadLevel.WinApi]::ActivateWindow($existingWindow)
-        }
-        Close-SingleInstanceGuard -Guard $script:SingleInstanceGuard
-        exit 0
     }
+
+    Load-Config
+}
+catch {
+    Close-SingleInstanceGuard -Guard $script:SingleInstanceGuard
+    $script:SingleInstanceGuard = $null
+    $startupError = Format-UiException -Exception $_.Exception -Language $script:UiLanguage
+    if ($script:UiSmokeTest) {
+        Write-Error "Startup failed: $startupError"
+        exit 1
+    }
+    [System.Windows.Forms.MessageBox]::Show(
+        ("启动失败 / Startup failed`r`n`r`n{0}" -f $startupError),
+        '模方面板快捷键助手 / ModelFun Shortcut Tool',
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Error
+    ) | Out-Null
+    exit 1
 }
 
 $currentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
@@ -2184,7 +2212,7 @@ $reloadButton.Add_Click({
         Load-ConfigurationIntoUi
     }
     catch {
-        Set-Status (T 'status.configReadFailed' @{ message = $_.Exception.Message }) '#C0392B'
+        Set-Status (T 'status.configReadFailed' @{ message = (Format-UiException -Exception $_.Exception -Language $script:UiLanguage) }) '#C0392B'
     }
 })
 $buttonPanel.Controls.Add($reloadButton)
@@ -2319,7 +2347,7 @@ $languageCombo.Add_SelectedIndexChanged({
         Set-Status (T 'status.languageChanged') '#1E8449'
     }
     catch {
-        Set-Status (T 'status.configReadFailed' @{ message = $_.Exception.Message }) '#C0392B'
+        Set-Status (T 'status.configReadFailed' @{ message = (Format-UiException -Exception $_.Exception -Language $script:UiLanguage) }) '#C0392B'
     }
 })
 
@@ -2370,7 +2398,7 @@ $form.Add_DpiChanged({
         Update-MainWindowLayout
     }
     catch {
-        Set-Status (T 'status.dpiLayoutFailed' @{ message = $_.Exception.Message }) '#C0392B'
+        Set-Status (T 'status.dpiLayoutFailed' @{ message = (Format-UiException -Exception $_.Exception -Language $script:UiLanguage) }) '#C0392B'
     }
 })
 
@@ -2426,7 +2454,7 @@ $timer.Add_Tick({
         }
     }
     catch {
-        Set-Status (T 'status.runtimeError' @{ message = $_.Exception.Message }) '#C0392B'
+        Set-Status (T 'status.runtimeError' @{ message = (Format-UiException -Exception $_.Exception -Language $script:UiLanguage) }) '#C0392B'
     }
 })
 
@@ -2486,7 +2514,7 @@ $form.Add_Shown({
             return
         }
         [System.Windows.Forms.MessageBox]::Show(
-            $_.Exception.Message,
+            (Format-UiException -Exception $_.Exception -Language $script:UiLanguage),
             (T 'message.initializationFailed'),
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error

@@ -92,7 +92,36 @@ try {
     }
     $null = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
-    Write-Output 'PASS config backup, safe save, restore, recovery, export, import and invalid-input protection'
+    $fallbackRoot = Join-Path $testRoot 'fallback'
+    $fallbackBackups = Join-Path $fallbackRoot 'config-backups'
+    $fallbackConfig = Join-Path $fallbackRoot 'config.json'
+    New-Item -ItemType Directory -Path $fallbackBackups -Force | Out-Null
+    $validator = {
+        param($candidate)
+        if ([int]$candidate.version -ne 5 -or $candidate.value -notin @('older-valid','current')) {
+            throw 'schema-invalid'
+        }
+        return $candidate
+    }
+    Set-Content -LiteralPath (Join-Path $fallbackBackups 'config.20260101-000000-000.json') -Value '{"version":5,"value":"older-valid"}' -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $fallbackBackups 'config.20260102-000000-000.json') -Value '{corrupt-latest' -Encoding UTF8
+    Set-Content -LiteralPath $fallbackConfig -Value '{"version":5,"value":"current"}' -Encoding UTF8
+    $fallbackPath = Restore-LatestConfigFile -ConfigPath $fallbackConfig -BackupDirectory $fallbackBackups -Validator $validator
+    $fallbackRestored = Get-Content -LiteralPath $fallbackConfig -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($fallbackPath -notlike '*20260101*' -or $fallbackRestored.value -ne 'older-valid') {
+        throw '恢复未跳过损坏的最新备份'
+    }
+
+    Set-Content -LiteralPath $fallbackConfig -Value '{"version":5,"value":"invalid-schema"}' -Encoding UTF8
+    $fallbackRecovery = Read-ConfigFileWithRecovery `
+        -ConfigPath $fallbackConfig `
+        -BackupDirectory $fallbackBackups `
+        -Validator $validator
+    if (-not $fallbackRecovery.Restored -or $fallbackRecovery.Config.value -eq 'invalid-schema') {
+        throw '结构错误配置未回退到有效备份'
+    }
+
+    Write-Output 'PASS config backup, safe save, restore, valid-backup fallback, recovery, export, import and invalid-input protection'
 }
 finally {
     if (Test-Path -LiteralPath $testRoot) {

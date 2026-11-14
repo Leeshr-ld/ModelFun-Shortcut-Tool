@@ -12,7 +12,7 @@ if ($content -notmatch '<!doctype html>') {
 if ($content -notmatch 'name="viewport"') {
     throw 'Guide is missing responsive viewport metadata'
 }
-if ($content -notmatch 'V1\.3\.0') {
+if ($content -notmatch 'V1\.3\.1') {
     throw 'Guide does not identify the current version'
 }
 if ($content -notmatch 'id="languageToggle"') {
@@ -51,6 +51,12 @@ if ($content -notmatch 'prefers-reduced-motion') {
 }
 if ($content -notmatch 'localStorage') {
     throw 'Guide does not remember the selected language'
+}
+if ($content -notmatch 'function safeStorageGet' -or $content -notmatch 'function safeStorageSet') {
+    throw 'Guide does not guard localStorage access'
+}
+if ($content -notmatch 'afterprint') {
+    throw 'Guide does not restore accordion state after printing'
 }
 if ($content -notmatch '<svg') {
     throw 'Guide does not contain vector graphics'

@@ -31,6 +31,7 @@ $copyMap = @(
     @{ Source = 'Localization.ps1'; Destination = 'Localization.ps1' },
     @{ Source = 'ConfigStorage.ps1'; Destination = 'ConfigStorage.ps1' },
     @{ Source = 'SingleInstance.ps1'; Destination = 'SingleInstance.ps1' },
+    @{ Source = 'runtime.sha256'; Destination = 'runtime.sha256' },
     @{ Source = 'config.default.json'; Destination = 'config.json' },
     @{ Source = 'ShortcutRules.ps1'; Destination = 'ShortcutRules.ps1' },
     @{ Source = 'MouseAutomation.ps1'; Destination = 'MouseAutomation.ps1' },

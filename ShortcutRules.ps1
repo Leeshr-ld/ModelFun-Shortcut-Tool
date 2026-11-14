@@ -14,6 +14,10 @@
     return $KeyName
 }
 
+if (-not (Get-Command New-UiException -ErrorAction SilentlyContinue)) {
+    . (Join-Path $PSScriptRoot 'Localization.ps1')
+}
+
 function Get-ShortcutSignature($Binding) {
     if ($null -eq $Binding) {
         return ''
@@ -224,7 +228,9 @@ function New-DefaultShortcutConfig([string]$TargetTitle) {
 
 function ConvertTo-V4ShortcutConfig($Config) {
     if ($null -eq $Config) {
-        throw '配置不能为空。'
+        throw (New-UiException `
+            -Key 'error.configEmpty' `
+            -FallbackMessage '配置不能为空。')
     }
 
     $targetTitle = if ($Config.PSObject.Properties['targetTitle']) { [string]$Config.targetTitle } else { '模方ModelFun' }
@@ -281,9 +287,104 @@ function ConvertTo-V5ShortcutConfig($Config) {
     return $converted
 }
 
+function ConvertTo-ValidatedShortcutConfig($Config) {
+    if ($null -eq $Config) {
+        throw '配置不能为空。'
+    }
+
+    $validated = ConvertTo-V5ShortcutConfig -Config $Config
+    $targetTitle = [string]$validated.targetTitle
+    if ([string]::IsNullOrWhiteSpace($targetTitle) -or
+        $targetTitle -notmatch '(?i)模方|ModelFun') {
+        throw (New-UiException `
+            -Key 'error.targetWindow' `
+            -FallbackMessage "配置目标窗口不是ModelFun：$targetTitle" `
+            -Tokens @{ target = $targetTitle })
+    }
+
+    if ([string]$validated.language -notin @('zh-CN', 'en-US')) {
+        $validated.language = 'zh-CN'
+    }
+
+    $bindingsToCheck = New-Object System.Collections.Generic.List[object]
+    $bindingsToCheck.Add([pscustomobject]@{
+        Panel = ''
+        Action = 'backup'
+        Binding = Get-ActionBinding -Config $validated -PanelTitle '' -ActionName 'backup'
+    })
+    foreach ($panelTitle in Get-PanelTitles) {
+        foreach ($actionName in Get-PanelActionNames $panelTitle) {
+            $bindingsToCheck.Add([pscustomobject]@{
+                Panel = $panelTitle
+                Action = $actionName
+                Binding = Get-ActionBinding -Config $validated -PanelTitle $panelTitle -ActionName $actionName
+            })
+        }
+    }
+
+    foreach ($entry in $bindingsToCheck) {
+        $binding = $entry.Binding
+        $name = if ([string]::IsNullOrWhiteSpace([string]$entry.Panel)) {
+            $entry.Action
+        }
+        else {
+            "$($entry.Panel)/$($entry.Action)"
+        }
+        if ($binding -isnot [pscustomobject]) {
+            throw (New-UiException `
+                -Key 'error.bindingShape' `
+                -FallbackMessage "快捷键绑定结构错误：$name" `
+                -Tokens @{ name = $name })
+        }
+        foreach ($propertyName in @('key', 'ctrl', 'alt', 'shift', 'mouseButton')) {
+            if (-not $binding.PSObject.Properties[$propertyName]) {
+                throw (New-UiException `
+                    -Key 'error.bindingField' `
+                    -FallbackMessage "快捷键绑定缺少字段：$name/$propertyName" `
+                    -Tokens @{ name = $name; field = $propertyName })
+            }
+        }
+        foreach ($boolName in @('ctrl', 'alt', 'shift')) {
+            if ($binding.$boolName -isnot [bool]) {
+                throw (New-UiException `
+                    -Key 'error.booleanField' `
+                    -FallbackMessage "快捷键布尔字段错误：$name/$boolName" `
+                    -Tokens @{ name = $name; field = $boolName })
+            }
+        }
+        if ($null -ne $binding.key -and $binding.key -isnot [string]) {
+            throw (New-UiException `
+                -Key 'error.keyType' `
+                -FallbackMessage "快捷键字段类型错误：$name/key" `
+                -Tokens @{ name = $name })
+        }
+        if ($null -eq $binding.mouseButton) {
+            $binding.mouseButton = ''
+        }
+        if ([string]$binding.mouseButton -notin @('', 'XButton1', 'XButton2')) {
+            throw (New-UiException `
+                -Key 'error.unsupportedMouse' `
+                -FallbackMessage "不支持的鼠标快捷键：$name/$($binding.mouseButton)" `
+                -Tokens @{ name = $name; mouse = [string]$binding.mouseButton })
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$binding.key) -and
+            [string]::IsNullOrWhiteSpace([string]$binding.mouseButton)) {
+            throw (New-UiException `
+                -Key 'error.unboundShortcut' `
+                -FallbackMessage "快捷键未绑定：$name" `
+                -Tokens @{ name = $name })
+        }
+    }
+
+    return $validated
+}
+
 function Set-ConfigLanguage($Config, [string]$Language) {
     if ($Language -notin @('zh-CN', 'en-US')) {
-        throw "不支持的语言：$Language"
+        throw (New-UiException `
+            -Key 'error.unsupportedLanguage' `
+            -FallbackMessage "不支持的语言：$Language" `
+            -Tokens @{ language = $Language })
     }
     if ($Config.PSObject.Properties['language']) {
         $Config.language = $Language

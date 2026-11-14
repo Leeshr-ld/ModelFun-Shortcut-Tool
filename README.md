@@ -4,7 +4,7 @@
 
 一款面向 **ModelFun / 模方ModelFun** 的 Windows 快捷键与自动化工具。程序会自动识别当前置平面板，并为常用按钮提供可自定义的键盘、鼠标快捷键。
 
-> 当前版本：`V1.3.0`
+> 当前版本：`V1.3.1`
 >
 > 作者：`shijye`
 >
@@ -14,12 +14,14 @@
 
 ModelFun Shortcut Tool is a Windows utility that detects supported ModelFun panels and maps their buttons to customizable keyboard or mouse shortcuts.
 
-V1.3.0 adds:
+V1.3.1 adds:
 
 - A complete Chinese/English interface with a saved language choice.
 - Single-instance protection that activates the existing window.
 - Automatic configuration backups, in-app recovery, import, and export.
 - V5 configuration migration without losing existing shortcuts.
+- Runtime integrity verification and a scripted launcher build.
+- Strict configuration schema validation and fallback to older valid backups.
 
 The application requires administrator permission because ModelFun normally runs elevated. See the Chinese sections below for the full shortcut workflow, safety notes, and build/test instructions.
 
@@ -90,10 +92,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\RoadLevelHotkeys.ps1
 ## 构建便携包
 
 ```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\构建启动器.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\打包便携版.ps1
 ```
 
-脚本会读取`version.json`，只打包运行文件，并生成ZIP和SHA256文件。详细说明见[打包说明.md](打包说明.md)。
+构建脚本会生成`runtime.sha256`、固定清单哈希并编译启动器。打包脚本随后只复制运行文件，并生成ZIP和SHA256文件。详细说明见[打包说明.md](打包说明.md)。
 
 ## 测试
 
@@ -107,6 +110,8 @@ pwsh -NoProfile -File .\tests\Test-Localization.ps1
 pwsh -NoProfile -File .\tests\Test-ConfigStorage.ps1
 pwsh -NoProfile -File .\tests\Test-SingleInstance.ps1
 pwsh -NoProfile -File .\tests\Test-UserGuide.ps1
+pwsh -NoProfile -File .\tests\Test-RuntimeIntegrity.ps1
+pwsh -NoProfile -File .\tests\Test-StartupFailure.ps1
 powershell -NoProfile -File .\tests\Test-DpiAwareness.ps1
 powershell -NoProfile -File .\tests\Test-UiStartup.ps1
 pwsh -NoProfile -File .\tests\Test-ReleasePackage.ps1
@@ -122,6 +127,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Test-MouseClick.ps1
 
 ```text
 RoadLevelHotkeys.ps1   主程序与界面
+构建启动器.ps1          生成运行时清单并编译EXE
+RuntimeIntegrity.cs    启动器运行时完整性校验
+RuntimeManifestHash.g.cs 构建时固定完整性清单哈希
+runtime.sha256         全部可执行资源的SHA256清单
 DpiSupport.ps1         进程级PerMonitorV2 DPI初始化
 Localization.ps1       中英文界面资源与显示名称映射
 ConfigStorage.ps1      配置安全写入、自动备份、恢复和导入导出
@@ -139,6 +148,8 @@ tests/                 自动化测试
 ## 数据安全
 
 本工具会执行真实鼠标点击，包括“全选”和“立即备份”。首次使用或升级软件后，请先在工程副本上验证完整备份流程，并始终保留独立备份。
+
+启动器会在管理员PowerShell启动前校验`runtime.sha256`和内置清单哈希，防止同目录脚本被替换。当前发布EXE尚未购买商业代码签名证书，因此下载后仍应核对Release提供的SHA256；完整性清单也不能替代Authenticode签名。
 
 本项目与DASPATIAL、ModelFun官方无隶属或授权关系。ModelFun是第三方软件，其界面结构变化可能导致坐标识别失效。
 

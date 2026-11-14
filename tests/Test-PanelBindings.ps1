@@ -139,6 +139,37 @@ Invoke-Test '语言设置可独立更新且不影响快捷键' {
     Assert-Equal 'F8' $actual.panelBindings.'补洞'.cancel.key '语言更新修改了快捷键'
 }
 
+Invoke-Test '配置校验拒绝非ModelFun目标窗口' {
+    if (-not (Get-Command ConvertTo-ValidatedShortcutConfig -ErrorAction SilentlyContinue)) {
+        throw '缺少ConvertTo-ValidatedShortcutConfig'
+    }
+    $config = New-DefaultShortcutConfig -TargetTitle 'Notepad'
+    $failed = $false
+    try {
+        ConvertTo-ValidatedShortcutConfig -Config $config | Out-Null
+    }
+    catch {
+        $failed = $true
+    }
+    Assert-True $failed '配置校验接受了非ModelFun目标窗口'
+}
+
+Invoke-Test '配置校验拒绝错误快捷键结构' {
+    if (-not (Get-Command ConvertTo-ValidatedShortcutConfig -ErrorAction SilentlyContinue)) {
+        throw '缺少ConvertTo-ValidatedShortcutConfig'
+    }
+    $config = New-DefaultShortcutConfig -TargetTitle '模方ModelFun'
+    $config.commonBindings.backup = 'not-a-binding'
+    $failed = $false
+    try {
+        ConvertTo-ValidatedShortcutConfig -Config $config | Out-Null
+    }
+    catch {
+        $failed = $true
+    }
+    Assert-True $failed '配置校验接受了字符串形式的快捷键绑定'
+}
+
 Write-Output "SUMMARY passed=$script:Passed failed=$script:Failed"
 if ($script:Failed -gt 0) {
     exit 1

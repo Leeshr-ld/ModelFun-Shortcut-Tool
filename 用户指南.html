@@ -1071,7 +1071,7 @@
         </svg>
         <div class="brand-copy">
           <span class="brand-title" data-zh="模方面板快捷键助手" data-en="ModelFun Shortcut Tool">模方面板快捷键助手</span>
-          <span class="brand-meta">V1.3.0 · <span data-zh="离线图形用户指南" data-en="Offline visual user guide">离线图形用户指南</span></span>
+          <span class="brand-meta">V1.3.1 · <span data-zh="离线图形用户指南" data-en="Offline visual user guide">离线图形用户指南</span></span>
         </div>
       </div>
 
@@ -1214,7 +1214,7 @@
 
           <div class="mock-window" role="img" aria-label="Main window diagram">
             <div class="mock-titlebar">
-              <span data-zh="模方面板快捷键助手 V1.3.0" data-en="ModelFun Shortcut Tool V1.3.0">模方面板快捷键助手 V1.3.0</span>
+              <span data-zh="模方面板快捷键助手 V1.3.1" data-en="ModelFun Shortcut Tool V1.3.1">模方面板快捷键助手 V1.3.1</span>
               <span class="mock-window-dots" aria-hidden="true"><span></span><span></span><span></span></span>
             </div>
             <div class="mock-body">
@@ -1468,7 +1468,7 @@
             </details>
             <details>
               <summary data-zh="跨显示器后按钮被裁切" data-en="Buttons are clipped after moving monitors">跨显示器后按钮被裁切</summary>
-              <p data-zh="确认使用的是 V1.3.0，并让启动器优先使用 Windows PowerShell 5.1。再把窗口拖到另一台显示器观察状态行和底部按钮。" data-en="Use V1.3.0 and let the launcher prefer Windows PowerShell 5.1. Move the window to another monitor and check the status line and bottom buttons.">确认使用的是 V1.3.0，并让启动器优先使用 Windows PowerShell 5.1。再把窗口拖到另一台显示器观察状态行和底部按钮。</p>
+              <p data-zh="确认使用的是 V1.3.1，并让启动器优先使用 Windows PowerShell 5.1。再把窗口拖到另一台显示器观察状态行和底部按钮。" data-en="Use V1.3.1 and let the launcher prefer Windows PowerShell 5.1. Move the window to another monitor and check the status line and bottom buttons.">确认使用的是 V1.3.1，并让启动器优先使用 Windows PowerShell 5.1。再把窗口拖到另一台显示器观察状态行和底部按钮。</p>
             </details>
           </div>
         </section>
@@ -1498,7 +1498,7 @@
   </main>
 
   <footer class="site-footer">
-    <p data-zh="模方面板快捷键助手 V1.3.0 · 作者 shijye · 本指南可离线打开和打印。" data-en="ModelFun Shortcut Tool V1.3.0 · Author shijye · This guide works offline and can be printed.">模方面板快捷键助手 V1.3.0 · 作者 shijye · 本指南可离线打开和打印。</p>
+    <p data-zh="模方面板快捷键助手 V1.3.1 · 作者 shijye · 本指南可离线打开和打印。" data-en="ModelFun Shortcut Tool V1.3.1 · Author shijye · This guide works offline and can be printed.">模方面板快捷键助手 V1.3.1 · 作者 shijye · 本指南可离线打开和打印。</p>
   </footer>
 
   <noscript>
@@ -1510,9 +1510,26 @@
       const storageKey = "modelfun-guide-language";
       const buttons = Array.from(document.querySelectorAll("[data-set-lang]"));
       const localized = Array.from(document.querySelectorAll("[data-zh][data-en]"));
+
+      function safeStorageGet(key) {
+        try {
+          return localStorage.getItem(key);
+        } catch {
+          return null;
+        }
+      }
+
+      function safeStorageSet(key, value) {
+        try {
+          localStorage.setItem(key, value);
+        } catch {
+          // The guide still works when file-origin storage is disabled.
+        }
+      }
+
       const requested = new URLSearchParams(window.location.search).get("lang")
         || window.location.hash.replace(/^#lang=/, "")
-        || localStorage.getItem(storageKey)
+        || safeStorageGet(storageKey)
         || ((navigator.language || "").toLowerCase().startsWith("zh") ? "zh-CN" : "en-US");
 
       function normalizeLanguage(value) {
@@ -1531,7 +1548,7 @@
           button.setAttribute("aria-pressed", String(button.dataset.setLang === language));
         });
         if (persist) {
-          localStorage.setItem(storageKey, language);
+          safeStorageSet(storageKey, language);
         }
       }
 
@@ -1539,10 +1556,19 @@
         button.addEventListener("click", () => applyLanguage(button.dataset.setLang, true));
       });
 
+      const printOpenStates = new Map();
       window.addEventListener("beforeprint", () => {
+        printOpenStates.clear();
         document.querySelectorAll("details").forEach((details) => {
+          printOpenStates.set(details, details.open);
           details.open = true;
         });
+      });
+      window.addEventListener("afterprint", () => {
+        printOpenStates.forEach((wasOpen, details) => {
+          details.open = wasOpen;
+        });
+        printOpenStates.clear();
       });
 
       applyLanguage(requested, false);
