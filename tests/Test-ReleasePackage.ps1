@@ -73,8 +73,8 @@ try {
         }
     }
 
-    if (-not ($names | Where-Object { $_ -like '*模方面板快捷键助手_V1.1/*' })) {
-        throw '发行包缺少V1.1顶层目录'
+    if (-not ($names | Where-Object { $_ -like '*模方面板快捷键助手_V1.2.0/*' })) {
+        throw '发行包缺少V1.2.0顶层目录'
     }
 
     if ([string]$config.commonBindings.backup.key -ne 'B') {

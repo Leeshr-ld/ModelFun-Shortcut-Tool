@@ -4,7 +4,7 @@
 
 一款面向 **ModelFun / 模方ModelFun** 的 Windows 快捷键与自动化工具。程序会自动识别当前置平面板，并为常用按钮提供可自定义的键盘、鼠标快捷键。
 
-> 当前版本：`V1.1`
+> 当前版本：`V1.2.0`
 >
 > 作者：`shijye`
 >
@@ -81,6 +81,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\打包便携版.ps1
 
 ```powershell
 pwsh -NoProfile -File .\tests\Test-ShortcutRules.ps1
+pwsh -NoProfile -File .\tests\Test-PanelBindings.ps1
 pwsh -NoProfile -File .\tests\Test-BackupWorkflow.ps1
 pwsh -NoProfile -File .\tests\Test-VersionInfo.ps1
 pwsh -NoProfile -File .\tests\Test-LayoutPolicy.ps1

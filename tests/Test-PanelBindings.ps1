@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $rulesPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'ShortcutRules.ps1'
 . $rulesPath
