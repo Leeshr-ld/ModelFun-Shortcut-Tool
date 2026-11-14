@@ -678,14 +678,57 @@ function Get-PanelPoint([string]$name) {
     }
 
     $button = $panel.Profile.buttons[$name]
-    $scaleX = ([double]$panel.Bounds.Right - [double]$panel.Bounds.Left) / [double]$panel.Profile.referenceWidth
-    $scaleY = ([double]$panel.Bounds.Bottom - [double]$panel.Bounds.Top) / [double]$panel.Profile.referenceHeight
+    $scaleInfo = Get-PanelScaleInfo `
+        -PanelWidth ($panel.Bounds.Right - $panel.Bounds.Left) `
+        -PanelHeight ($panel.Bounds.Bottom - $panel.Bounds.Top) `
+        -ReferenceWidth $panel.Profile.referenceWidth `
+        -ReferenceHeight $panel.Profile.referenceHeight
+    if (-not $scaleInfo.IsReliable) {
+        Write-DiagnosticLog ("PANEL_SCALE_UNRELIABLE={0}; X={1:F3}; Y={2:F3}; Deviation={3:F3}" -f $panel.Title, $scaleInfo.ScaleX, $scaleInfo.ScaleY, $scaleInfo.AspectDeviation)
+        return $null
+    }
+
     return @{
-        X = [int][Math]::Round($panel.Bounds.Left + $button.x * $scaleX)
-        Y = [int][Math]::Round($panel.Bounds.Top + $button.y * $scaleY)
+        X = [int][Math]::Round($panel.Bounds.Left + $button.x * $scaleInfo.ScaleX)
+        Y = [int][Math]::Round($panel.Bounds.Top + $button.y * $scaleInfo.ScaleY)
         Title = $panel.Title
         Label = [string]$button.label
     }
+}
+
+function Get-DipWorkingArea($OwnerControl) {
+    $screen = [System.Windows.Forms.Screen]::FromControl($OwnerControl)
+    $scale = [double]$OwnerControl.DeviceDpi / 96.0
+    $size = ConvertTo-DipSize -PixelWidth $screen.WorkingArea.Width -PixelHeight $screen.WorkingArea.Height -Scale $scale
+    return [pscustomobject]@{
+        Width = [int]$size.Width
+        Height = [int]$size.Height
+        Scale = $scale
+    }
+}
+
+function Resize-DialogWithinWorkingArea($Dialog, $OwnerControl) {
+    $workingArea = Get-DipWorkingArea $OwnerControl
+    $size = Get-ClampedDialogSize `
+        -WorkingWidthDip $workingArea.Width `
+        -WorkingHeightDip $workingArea.Height `
+        -DesiredWidth $Dialog.ClientSize.Width `
+        -DesiredHeight $Dialog.ClientSize.Height
+    $Dialog.MinimumSize = New-Object System.Drawing.Size(
+        [Math]::Min($Dialog.MinimumSize.Width, $size.Width),
+        [Math]::Min($Dialog.MinimumSize.Height, $size.Height)
+    )
+    $Dialog.ClientSize = New-Object System.Drawing.Size($size.Width, $size.Height)
+}
+
+function Fit-MainFormToWorkingArea {
+    $workingArea = Get-DipWorkingArea $form
+    $size = Get-PreferredClientSize -WorkingWidthDip $workingArea.Width -WorkingHeightDip $workingArea.Height
+    $form.MinimumSize = New-Object System.Drawing.Size(
+        [Math]::Min(780, [Math]::Max(560, $size.Width)),
+        [Math]::Min(540, [Math]::Max(420, $size.Height))
+    )
+    $form.ClientSize = New-Object System.Drawing.Size($size.Width, $size.Height)
 }
 
 function Wait-ForWindowTitle([string]$TitleFragment, [int]$TimeoutMilliseconds = 5000) {
@@ -991,6 +1034,8 @@ function Start-Calibration {
     $overlay.BackColor = [System.Drawing.Color]::FromArgb(38, 48, 61)
     $overlay.ForeColor = [System.Drawing.Color]::White
     $overlay.ClientSize = New-Object System.Drawing.Size(650, 112)
+    $overlay.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
+    Resize-DialogWithinWorkingArea -Dialog $overlay -OwnerControl $form
 
     $workingArea = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
     $overlay.Left = $workingArea.Left + [int](($workingArea.Width - $overlay.Width) / 2)
@@ -1202,6 +1247,8 @@ function Show-ShortcutEditor([string]$ActionName) {
     $dialog.ClientSize = New-Object System.Drawing.Size(560, 315)
     $dialog.KeyPreview = $true
     $dialog.Font = New-Object System.Drawing.Font('Microsoft YaHei UI', 9)
+    $dialog.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
+    Resize-DialogWithinWorkingArea -Dialog $dialog -OwnerControl $form
 
     $title = New-Object System.Windows.Forms.Label
     $title.Text = "修改「$($buttonInfo.label)」的快捷键"
@@ -1446,6 +1493,7 @@ function Show-AboutDialog {
     $dialog.MinimizeBox = $false
     $dialog.Font = New-Object System.Drawing.Font('Microsoft YaHei UI', 9)
     $dialog.BackColor = [System.Drawing.Color]::FromArgb(246, 248, 251)
+    Resize-DialogWithinWorkingArea -Dialog $dialog -OwnerControl $form
 
     $layout = New-Object System.Windows.Forms.TableLayoutPanel
     $layout.Dock = [System.Windows.Forms.DockStyle]::Fill
@@ -1876,6 +1924,15 @@ function Update-MainWindowLayout {
 }
 
 $form.Add_Resize({ Update-MainWindowLayout })
+$form.Add_DpiChanged({
+    try {
+        Fit-MainFormToWorkingArea
+        Update-MainWindowLayout
+    }
+    catch {
+        Set-Status ("DPI切换后布局失败：{0}" -f $_.Exception.Message) '#C0392B'
+    }
+})
 
 $timer = New-Object System.Windows.Forms.Timer
 $timer.Interval = 40
@@ -1931,6 +1988,7 @@ $timer.Add_Tick({
 
 $form.Add_Shown({
     try {
+        Fit-MainFormToWorkingArea
         Update-MainWindowLayout
         Load-ConfigurationIntoUi
         $timer.Start()
