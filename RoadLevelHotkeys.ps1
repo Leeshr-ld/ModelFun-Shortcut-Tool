@@ -435,7 +435,7 @@ $script:ActionOrder = @(
     'slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6', 'slot7', 'slot8',
     'toggle1', 'toggle2', 'undo', 'redo', 'confirm', 'cancel'
 )
-$script:PanelTitles = @('道路置平', '表面置平', '指定置平', '补洞')
+$script:PanelTitles = @('道路置平', '表面置平', '指定置平', '立面修整', '删除小物件', '补洞')
 $script:PanelProfiles = @{
     '道路置平' = @{
         referenceWidth = 230
@@ -474,6 +474,52 @@ $script:PanelProfiles = @{
             toggle2 = [pscustomobject]@{ label = '优化切割线'; x = 82; y = 162 }
             confirm = [pscustomobject]@{ label = '确定'; x = 97; y = 235 }
             cancel = [pscustomobject]@{ label = '取消'; x = 270; y = 235 }
+        }
+    }
+    '立面修整' = @{
+        referenceWidth = 176
+        referenceHeight = 720
+        buttons = [ordered]@{
+            slot1 = [pscustomobject]@{ label = '形状绘制1'; x = 41; y = 94 }
+            slot2 = [pscustomobject]@{ label = '形状绘制2'; x = 85; y = 94 }
+            slot3 = [pscustomobject]@{ label = '形状绘制3'; x = 129; y = 94 }
+            slot4 = [pscustomobject]@{ label = '形状绘制4'; x = 41; y = 136 }
+            slot5 = [pscustomobject]@{ label = '形状绘制5'; x = 85; y = 136 }
+            slot6 = [pscustomobject]@{ label = '形状绘制6'; x = 129; y = 136 }
+            slot7 = [pscustomobject]@{ label = '形状绘制7'; x = 41; y = 178 }
+            slot8 = [pscustomobject]@{ label = '形状绘制8'; x = 85; y = 178 }
+            slot9 = [pscustomobject]@{ label = '形状绘制9'; x = 41; y = 229 }
+            slot10 = [pscustomobject]@{ label = '形状绘制10'; x = 85; y = 229 }
+            slot11 = [pscustomobject]@{ label = '形状绘制11'; x = 129; y = 229 }
+            toggle1 = [pscustomobject]@{ label = '融合到整体模型'; x = 39; y = 300 }
+            toggle2 = [pscustomobject]@{ label = '从整体模型中挖除'; x = 39; y = 328 }
+            toggle3 = [pscustomobject]@{ label = '不融合到整体模型'; x = 39; y = 356 }
+            slot12 = [pscustomobject]@{ label = '纹理1'; x = 58; y = 427 }
+            slot13 = [pscustomobject]@{ label = '纹理2'; x = 113; y = 427 }
+            slot14 = [pscustomobject]@{ label = '纹理3'; x = 41; y = 478 }
+            slot15 = [pscustomobject]@{ label = '纹理4'; x = 85; y = 478 }
+            slot16 = [pscustomobject]@{ label = '纹理5'; x = 129; y = 478 }
+            slot17 = [pscustomobject]@{ label = '纹理6'; x = 41; y = 520 }
+            slot18 = [pscustomobject]@{ label = '纹理7'; x = 85; y = 520 }
+            slot19 = [pscustomobject]@{ label = '纹理8'; x = 129; y = 520 }
+            slot20 = [pscustomobject]@{ label = '定拍影像'; x = 85; y = 561 }
+            undo = [pscustomobject]@{ label = '撤销'; x = 41; y = 641 }
+            redo = [pscustomobject]@{ label = '重做'; x = 85; y = 641 }
+            next = [pscustomobject]@{ label = '下一个'; x = 129; y = 641 }
+            confirm = [pscustomobject]@{ label = '确认'; x = 45; y = 694 }
+            cancel = [pscustomobject]@{ label = '取消'; x = 126; y = 694 }
+        }
+    }
+    '删除小物件' = @{
+        referenceWidth = 181
+        referenceHeight = 249
+        buttons = [ordered]@{
+            slot1 = [pscustomobject]@{ label = '选择箭头'; x = 45; y = 98 }
+            undo = [pscustomobject]@{ label = '撤销'; x = 90; y = 98 }
+            redo = [pscustomobject]@{ label = '重做'; x = 135; y = 98 }
+            slot2 = [pscustomobject]@{ label = '显示所有碎片'; x = 91; y = 177 }
+            confirm = [pscustomobject]@{ label = '确认'; x = 48; y = 225 }
+            cancel = [pscustomobject]@{ label = '取消'; x = 130; y = 225 }
         }
     }
     '补洞' = @{
@@ -1915,6 +1961,11 @@ if ($SelfTest) {
             }
         }
 
+        $declaredPanels = @(Get-PanelTitles)
+        if (($declaredPanels -join '|') -ne ($script:PanelTitles -join '|')) {
+            throw ("面板标题列表不一致：{0} / {1}" -f ($declaredPanels -join ','), ($script:PanelTitles -join ','))
+        }
+
         $profileChecks = [ordered]@{}
         foreach ($panelTitle in $script:PanelTitles) {
             $profile = $script:PanelProfiles[$panelTitle]
@@ -1924,6 +1975,14 @@ if ($SelfTest) {
                     $button.y -le 0 -or $button.y -ge $profile.referenceHeight) {
                     throw ("按钮坐标越界：{0}/{1}" -f $panelTitle, $entry.Key)
                 }
+            }
+            $actionNames = @(Get-PanelActionNames $panelTitle)
+            $buttonNames = @($profile.buttons.Keys)
+            $missingButtons = @($actionNames | Where-Object { $_ -notin $buttonNames })
+            $unboundButtons = @($buttonNames | Where-Object { $_ -notin $actionNames })
+            if ($missingButtons.Count -gt 0 -or $unboundButtons.Count -gt 0) {
+                throw ("面板动作与按钮不一致：{0}；缺少按钮=[{1}]；未配置动作=[{2}]" -f `
+                    $panelTitle, ($missingButtons -join ','), ($unboundButtons -join ','))
             }
             $profileChecks[$panelTitle] = $profile.buttons.Count
         }

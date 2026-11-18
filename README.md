@@ -4,7 +4,7 @@
 
 一款面向 **ModelFun / 模方ModelFun** 的 Windows 快捷键与自动化工具。程序会自动识别当前置平面板，并为常用按钮提供可自定义的键盘、鼠标快捷键。
 
-> 当前版本：`V1.3.1`
+> 当前版本：`V1.4.0`
 >
 > 作者：`shijye`
 >
@@ -14,7 +14,14 @@
 
 ModelFun Shortcut Tool is a Windows utility that detects supported ModelFun panels and maps their buttons to customizable keyboard or mouse shortcuts.
 
-V1.3.1 adds:
+V1.4.0 adds:
+
+- Automatic detection and shortcuts for the Facade Repair panel (28 actions: 11 shape tools, 3 merge options, 8 texture buttons, fixed-shot image, undo/redo/next, confirm/cancel).
+- Automatic detection and shortcuts for the Delete Small Objects panel.
+- Position buttons expanded to 20, using Ctrl+Alt+Shift and Shift-modified digits for the extra buttons.
+- Existing configurations migrate automatically: saved shortcuts for the original four panels are kept, and defaults are appended for the new panels.
+
+V1.3.1 added:
 
 - A complete Chinese/English interface with a saved language choice.
 - Single-instance protection that activates the existing window.
@@ -27,7 +34,7 @@ The application requires administrator permission because ModelFun normally runs
 
 ## 功能
 
-- 自动识别道路置平、表面置平、指定置平和补洞面板。
+- 自动识别道路置平、表面置平、指定置平、立面修整、删除小物件和补洞面板。
 - 支持键盘组合键和鼠标侧键映射。
 - 快捷键可视化编辑、内部重复检测和模方原版快捷键冲突提示。
 - 一键恢复全部默认快捷键。
@@ -48,6 +55,8 @@ The application requires administrator permission because ModelFun normally runs
 | 道路置平 | 是 | 操作、撤销、重做、确认、取消 |
 | 表面置平 | 是 | 操作、应用、撤销、重做、确认、取消 |
 | 指定置平 | 是 | 操作、曲线、应用、更多、撤销、重做、选项、确定、取消 |
+| 立面修整 | 是 | 11个形状绘制、3个融合选项、8个纹理按钮、定拍影像、撤销、重做、下一个、确认、取消 |
+| 删除小物件 | 是 | 选择箭头、显示所有碎片、撤销、重做、确认、取消 |
 | 补洞 | 是 | 四种填充方式、两种编辑方式、撤销、重做、确认、取消 |
 
 ## 默认快捷键
@@ -56,13 +65,16 @@ The application requires administrator permission because ModelFun normally runs
 |---|---|
 | 通用备份 | `Ctrl+Alt+B` |
 | 位置按钮1~8 | `Ctrl+Alt+1~8` |
-| 选项切换 | `Ctrl+Alt+H` / `Ctrl+Alt+O` |
+| 位置按钮9~16 | `Ctrl+Alt+Shift+1~8` |
+| 位置按钮17~20 | `Ctrl+Alt+Shift+9/0/Q/W` |
+| 选项切换 | `Ctrl+Alt+H` / `Ctrl+Alt+O` / `Ctrl+Alt+P` |
+| 下一个 | `Ctrl+Alt+N` |
 | 撤销 / 重做 | `Ctrl+Alt+Z` / `Ctrl+Alt+R` |
 | 确认 / 取消 | `Ctrl+Alt+Enter` / `Ctrl+Alt+X` |
 
 快捷键可在软件内修改，也可通过 [config.default.json](config.default.json) 查看默认配置。
 
-四个面板的快捷键分别保存、互不干扰。同一组合键可以在不同面板中分别使用；同一面板内部仍禁止重复。全局备份快捷键独立保存，并且不能与任何面板按钮重复。
+六个面板的快捷键分别保存、互不干扰。同一组合键可以在不同面板中分别使用；同一面板内部仍禁止重复。全局备份快捷键独立保存，并且不能与任何面板按钮重复。
 
 ## 安装与运行
 

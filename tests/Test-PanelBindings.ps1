@@ -170,6 +170,31 @@ Invoke-Test '配置校验拒绝错误快捷键结构' {
     Assert-True $failed '配置校验接受了字符串形式的快捷键绑定'
 }
 
+Invoke-Test '新面板动作列表完整且无重复' {
+    $facade = @(Get-PanelActionNames '立面修整')
+    $deleteSmall = @(Get-PanelActionNames '删除小物件')
+    Assert-Equal 28 $facade.Count '立面修整动作数量错误'
+    Assert-Equal 6 $deleteSmall.Count '删除小物件动作数量错误'
+    Assert-Equal $facade.Count (@($facade | Select-Object -Unique).Count) '立面修整动作有重复'
+    Assert-True ($facade -contains 'next') '立面修整缺少下一个动作'
+    Assert-True ($facade -contains 'toggle3') '立面修整缺少第三个融合选项'
+    Assert-True ($deleteSmall -contains 'slot2') '删除小物件缺少显示所有碎片'
+}
+
+Invoke-Test '旧配置迁移会补齐新面板并保留原快捷键' {
+    $config = New-DefaultShortcutConfig -TargetTitle '模方ModelFun'
+    $config.panelBindings.PSObject.Properties.Remove('立面修整')
+    $config.panelBindings.PSObject.Properties.Remove('删除小物件')
+    $config.panelBindings.'道路置平'.slot1.key = 'F9'
+
+    $actual = ConvertTo-V5ShortcutConfig -Config $config
+    Assert-Equal 'F9' $actual.panelBindings.'道路置平'.slot1.key '迁移丢失原有快捷键'
+    Assert-Equal '1' $actual.panelBindings.'立面修整'.slot1.key '立面修整未补齐默认绑定'
+    Assert-Equal 'N' $actual.panelBindings.'立面修整'.next.key '立面修整未补齐下一个快捷键'
+    Assert-Equal 'P' $actual.panelBindings.'立面修整'.toggle3.key '立面修整未补齐第三个选项'
+    Assert-Equal '2' $actual.panelBindings.'删除小物件'.slot2.key '删除小物件未补齐默认绑定'
+}
+
 Write-Output "SUMMARY passed=$script:Passed failed=$script:Failed"
 if ($script:Failed -gt 0) {
     exit 1

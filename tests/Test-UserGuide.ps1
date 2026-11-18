@@ -12,8 +12,11 @@ if ($content -notmatch '<!doctype html>') {
 if ($content -notmatch 'name="viewport"') {
     throw 'Guide is missing responsive viewport metadata'
 }
-if ($content -notmatch 'V1\.3\.1') {
-    throw 'Guide does not identify the current version'
+$versionPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'version.json'
+$versionInfo = Get-Content -LiteralPath $versionPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$currentVersion = [string]$versionInfo.version
+if ([string]::IsNullOrWhiteSpace($currentVersion) -or -not $content.Contains($currentVersion)) {
+    throw "Guide does not identify the current version: $currentVersion"
 }
 if ($content -notmatch 'id="languageToggle"') {
     throw 'Guide is missing the language control'
@@ -33,7 +36,9 @@ foreach ($requiredText in @(
     'Config tools',
     'DPI',
     '故障排查',
-    'Troubleshooting'
+    'Troubleshooting',
+    '立面修整',
+    '删除小物件'
 )) {
     if (-not $content.Contains($requiredText)) {
         throw "Guide is missing required content: $requiredText"

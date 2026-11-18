@@ -98,6 +98,22 @@ Invoke-Test '同时返回键盘和鼠标冲突不发生动态绑定异常' {
     Assert-Equal 2 $actual.Count '应返回键盘和鼠标两个重复冲突'
 }
 
+Invoke-Test '扩展位置按钮使用Shift组合且无内部重复' {
+    $bindings = Get-DefaultBindings
+    Assert-Equal '1' $bindings.slot9.key '位置按钮9按键错误'
+    Assert-Equal $true $bindings.slot9.shift '位置按钮9未使用Shift'
+    Assert-Equal 'W' $bindings.slot20.key '位置按钮20按键错误'
+    Assert-Equal 'N' $bindings.next.key '下一个按键错误'
+    Assert-Equal 'P' $bindings.toggle3.key '选项切换3按键错误'
+
+    $signatures = @(
+        'slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6', 'slot7', 'slot8', 'slot9', 'slot10',
+        'slot11', 'slot12', 'slot13', 'slot14', 'slot15', 'slot16', 'slot17', 'slot18', 'slot19', 'slot20',
+        'toggle1', 'toggle2', 'toggle3', 'undo', 'redo', 'next', 'confirm', 'cancel'
+    ) | ForEach-Object { Get-ShortcutSignature $bindings.$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    Assert-Equal $signatures.Count (@($signatures | Select-Object -Unique).Count) '默认快捷键存在重复组合'
+}
+
 Invoke-Test '默认设置包含通用备份快捷键' {
     $actual = Get-DefaultBindings
     Assert-Equal 'B' $actual.backup.key '备份快捷键未恢复默认'

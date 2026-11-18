@@ -179,8 +179,22 @@ function Get-DefaultBindings {
         slot6 = [pscustomobject]@{ displayName = '位置按钮6'; key = '6'; ctrl = $true; alt = $true; shift = $false; mouseButton = '' }
         slot7 = [pscustomobject]@{ displayName = '位置按钮7'; key = '7'; ctrl = $true; alt = $true; shift = $false; mouseButton = '' }
         slot8 = [pscustomobject]@{ displayName = '位置按钮8'; key = '8'; ctrl = $true; alt = $true; shift = $false; mouseButton = '' }
+        slot9 = [pscustomobject]@{ displayName = '位置按钮9'; key = '1'; ctrl = $true; alt = $true; shift = $true; mouseButton = '' }
+        slot10 = [pscustomobject]@{ displayName = '位置按钮10'; key = '2'; ctrl = $true; alt = $true; shift = $true; mouseButton = '' }
+        slot11 = [pscustomobject]@{ displayName = '位置按钮11'; key = '3'; ctrl = $true; alt = $true; shift = $true; mouseButton = '' }
+        slot12 = [pscustomobject]@{ displayName = '位置按钮12'; key = '4'; ctrl = $true; alt = $true; shift = $true; mouseButton = '' }
+        slot13 = [pscustomobject]@{ displayName = '位置按钮13'; key = '5'; ctrl = $true; alt = $true; shift = $true; mouseButton = '' }
+        slot14 = [pscustomobject]@{ displayName = '位置按钮14'; key = '6'; ctrl = $true; alt = $true; shift = $true; mouseButton = '' }
+        slot15 = [pscustomobject]@{ displayName = '位置按钮15'; key = '7'; ctrl = $true; alt = $true; shift = $true; mouseButton = '' }
+        slot16 = [pscustomobject]@{ displayName = '位置按钮16'; key = '8'; ctrl = $true; alt = $true; shift = $true; mouseButton = '' }
+        slot17 = [pscustomobject]@{ displayName = '位置按钮17'; key = '9'; ctrl = $true; alt = $true; shift = $true; mouseButton = '' }
+        slot18 = [pscustomobject]@{ displayName = '位置按钮18'; key = '0'; ctrl = $true; alt = $true; shift = $true; mouseButton = '' }
+        slot19 = [pscustomobject]@{ displayName = '位置按钮19'; key = 'Q'; ctrl = $true; alt = $true; shift = $true; mouseButton = '' }
+        slot20 = [pscustomobject]@{ displayName = '位置按钮20'; key = 'W'; ctrl = $true; alt = $true; shift = $true; mouseButton = '' }
         toggle1 = [pscustomobject]@{ displayName = '选项切换1'; key = 'H'; ctrl = $true; alt = $true; shift = $false; mouseButton = '' }
         toggle2 = [pscustomobject]@{ displayName = '选项切换2'; key = 'O'; ctrl = $true; alt = $true; shift = $false; mouseButton = '' }
+        toggle3 = [pscustomobject]@{ displayName = '选项切换3'; key = 'P'; ctrl = $true; alt = $true; shift = $false; mouseButton = '' }
+        next = [pscustomobject]@{ displayName = '下一个'; key = 'N'; ctrl = $true; alt = $true; shift = $false; mouseButton = '' }
         undo = [pscustomobject]@{ displayName = '撤销'; key = 'Z'; ctrl = $true; alt = $true; shift = $false; mouseButton = 'XButton1' }
         redo = [pscustomobject]@{ displayName = '重做'; key = 'R'; ctrl = $true; alt = $true; shift = $false; mouseButton = 'XButton2' }
         confirm = [pscustomobject]@{ displayName = '确认'; key = 'Enter'; ctrl = $true; alt = $true; shift = $false; mouseButton = '' }
@@ -193,13 +207,22 @@ function Get-PanelActionNames([string]$PanelTitle) {
         '道路置平' { return @('slot1', 'undo', 'redo', 'confirm', 'cancel') }
         '表面置平' { return @('slot1', 'slot2', 'undo', 'redo', 'confirm', 'cancel') }
         '指定置平' { return @('slot1', 'slot2', 'slot3', 'slot4', 'undo', 'redo', 'toggle1', 'toggle2', 'confirm', 'cancel') }
+        '立面修整' {
+            return @(
+                'slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6', 'slot7', 'slot8', 'slot9', 'slot10', 'slot11',
+                'toggle1', 'toggle2', 'toggle3',
+                'slot12', 'slot13', 'slot14', 'slot15', 'slot16', 'slot17', 'slot18', 'slot19', 'slot20',
+                'undo', 'redo', 'next', 'confirm', 'cancel'
+            )
+        }
+        '删除小物件' { return @('slot1', 'slot2', 'undo', 'redo', 'confirm', 'cancel') }
         '补洞' { return @('slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6', 'undo', 'redo', 'confirm', 'cancel') }
         default { throw "未知面板：$PanelTitle" }
     }
 }
 
 function Get-PanelTitles {
-    return @('道路置平', '表面置平', '指定置平', '补洞')
+    return @('道路置平', '表面置平', '指定置平', '立面修整', '删除小物件', '补洞')
 }
 
 function New-DefaultShortcutConfig([string]$TargetTitle) {

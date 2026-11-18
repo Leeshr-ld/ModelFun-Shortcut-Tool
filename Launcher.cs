@@ -9,9 +9,9 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("shijye")]
 [assembly: AssemblyProduct("模方面板快捷键助手")]
 [assembly: AssemblyCopyright("Copyright (C) 2026 shijye. All rights reserved.")]
-[assembly: AssemblyInformationalVersion("V1.3.1")]
-[assembly: AssemblyFileVersion("1.3.1.0")]
-[assembly: AssemblyVersion("1.3.1.0")]
+[assembly: AssemblyInformationalVersion("V1.4.0")]
+[assembly: AssemblyFileVersion("1.4.0.0")]
+[assembly: AssemblyVersion("1.4.0.0")]
 
 internal static class Program
 {

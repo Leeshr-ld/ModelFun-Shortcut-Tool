@@ -22,18 +22,20 @@ try {
     if (-not (Test-Path -LiteralPath $exePath)) {
         throw "发行包没有生成EXE：$exePath"
     }
+    $versionInfo = Get-Content -LiteralPath (Join-Path $appDirectory 'version.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $expectedFileVersion = ([string]$versionInfo.version).TrimStart('V') + '.0'
     $exeVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($exePath).FileVersion
-    if ($exeVersion -ne '1.3.1.0') {
-        throw "EXE文件版本错误：$exeVersion"
+    if ($exeVersion -ne $expectedFileVersion) {
+        throw "EXE文件版本错误：$exeVersion，期望=$expectedFileVersion"
     }
 
     $archive = [System.IO.Compression.ZipFile]::OpenRead($result.ZipPath)
     try {
-        $names = @($archive.Entries | ForEach-Object FullName)
+        $names = @($archive.Entries | ForEach-Object { $_.FullName -replace '\\', '/' })
         if ($names.Count -ne 19) {
             throw "发行包文件数量错误：$($names.Count)，期望19"
         }
-        $configEntry = $archive.Entries | Where-Object { $_.FullName -like '*/config.json' } | Select-Object -First 1
+        $configEntry = $archive.Entries | Where-Object { ($_.FullName -replace '\\', '/') -like '*/config.json' } | Select-Object -First 1
         if ($null -eq $configEntry) {
             throw '发行包缺少config.json'
         }
@@ -44,7 +46,7 @@ try {
         finally {
             $reader.Dispose()
         }
-        $manifestEntry = $archive.Entries | Where-Object { $_.FullName -like '*/runtime.sha256' } | Select-Object -First 1
+        $manifestEntry = $archive.Entries | Where-Object { ($_.FullName -replace '\\', '/') -like '*/runtime.sha256' } | Select-Object -First 1
         if ($null -eq $manifestEntry) {
             throw '发行包缺少runtime.sha256'
         }
@@ -120,8 +122,9 @@ try {
         }
     }
 
-    if (-not ($names | Where-Object { $_ -like '*模方面板快捷键助手_V1.3.1/*' })) {
-        throw '发行包缺少V1.3.1顶层目录'
+    $expectedFolder = "模方面板快捷键助手_$([string]$versionInfo.version)"
+    if (-not ($names | Where-Object { $_ -like "$expectedFolder/*" })) {
+        throw "发行包缺少$expectedFolder顶层目录"
     }
 
     if ([string]$config.commonBindings.backup.key -ne 'B') {

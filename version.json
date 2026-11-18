@@ -1,11 +1,31 @@
 {
-  "version": "V1.3.1",
+  "version": "V1.4.0",
   "author": "shijye",
   "license": "GPL-3.0-only",
   "copyright": "Copyright (C) 2026 shijye. All rights reserved.",
   "licenseNotice": "本软件采用 GNU General Public License v3.0（GPL-3.0）完全开源。你可以运行、研究、修改和再分发本软件，也可以用于商业用途；分发修改版时必须遵守 GPL-3.0，提供完整对应源码并保留许可证和作者署名。",
   "licenseNoticeEn": "This software is fully open source under GNU GPL v3.0. You may run, study, modify, redistribute, and use it commercially. Modified distributions must comply with GPL-3.0, include the complete corresponding source code, and preserve the license and author credit.",
   "history": [
+    {
+      "version": "V1.4.0",
+      "date": "2026-11-18",
+      "changes": [
+        "新增「立面修整」面板的自动识别与快捷键：11个形状绘制按钮、3个融合选项、8个纹理按钮、定拍影像、撤销、重做、下一个、确认和取消，共28个动作。",
+        "新增「删除小物件」面板的自动识别与快捷键：选择箭头、显示所有碎片、撤销、重做、确认和取消。",
+        "位置按钮扩展到20个：前8个沿用Ctrl+Alt+1~8，第9~16个使用Ctrl+Alt+Shift+1~8，第17~20个使用Ctrl+Alt+Shift+9/0/Q/W。",
+        "新增「选项切换3」和「下一个」动作，补齐新面板按钮的中英文显示名称、状态提示和用户指南。",
+        "旧配置自动迁移：已保存的四个面板快捷键保持不变，只追加新面板与新动作的默认绑定。",
+        "默认配置、版本信息、关于窗口版本历史和便携包说明同步更新到V1.4.0。"
+      ],
+      "changesEn": [
+        "Added automatic detection and shortcuts for the Facade Repair panel: 11 shape tools, 3 merge options, 8 texture buttons, fixed-shot image, undo, redo, next, confirm, and cancel (28 actions).",
+        "Added automatic detection and shortcuts for the Delete Small Objects panel: select tool, show all fragments, undo, redo, confirm, and cancel.",
+        "Expanded position buttons to 20: the first eight keep Ctrl+Alt+1~8, buttons 9-16 use Ctrl+Alt+Shift+1~8, and buttons 17-20 use Ctrl+Alt+Shift+9/0/Q/W.",
+        "Added the Option Toggle 3 and Next actions, with bilingual labels, status text, and user guide entries for the new panels.",
+        "Existing configurations migrate automatically: shortcuts saved for the original four panels are preserved and only defaults for the new panels and actions are appended.",
+        "Updated the default configuration, version metadata, About version history, and portable package notes to V1.4.0."
+      ]
+    },
     {
       "version": "V1.3.1",
       "date": "2026-11-14",

@@ -92,6 +92,21 @@ if ((Get-LocalizedPanelTitle -PanelTitle '道路置平' -Language 'en-US') -ne '
 if ((Get-LocalizedActionLabel -Label '备份当前工程瓦片' -Language 'en-US') -ne 'Backup Project Tiles') {
     throw 'English action label is incorrect'
 }
+if ((Get-LocalizedPanelTitle -PanelTitle '立面修整' -Language 'en-US') -ne 'Facade Repair') {
+    throw 'English Facade Repair panel title is incorrect'
+}
+if ((Get-LocalizedPanelTitle -PanelTitle '删除小物件' -Language 'en-US') -ne 'Delete Small Objects') {
+    throw 'English Delete Small Objects panel title is incorrect'
+}
+if ((Get-LocalizedActionLabel -Label '形状绘制1' -Language 'en-US') -ne 'Shape Tool 1') {
+    throw 'English shape tool label is incorrect'
+}
+if ((Get-LocalizedActionLabel -Label '显示所有碎片' -Language 'en-US') -ne 'Show All Fragments') {
+    throw 'English fragment label is incorrect'
+}
+if ((Get-LocalizedActionCodeLabel -ActionName 'next' -Language 'zh-CN') -ne '下一个') {
+    throw 'Chinese Next action label is incorrect'
+}
 
 if (-not (Get-Command New-UiException -ErrorAction SilentlyContinue) -or
     -not (Get-Command Format-UiException -ErrorAction SilentlyContinue)) {

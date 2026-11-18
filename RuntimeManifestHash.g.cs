@@ -3,6 +3,6 @@ namespace RoadLevel
 {
     internal static class RuntimeManifestHash
     {
-        public const string Sha256 = "B059F0F34A0E55FA9BD457EC3D97DACCA930F85945ECFD877E6ECF2CF5E6A418";
+        public const string Sha256 = "DC211195315EA5AEA405E5B770C9B6063A9F381B5D506E6A100D1C1F3745FB11";
     }
 }

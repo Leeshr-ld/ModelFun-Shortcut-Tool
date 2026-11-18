@@ -1,4 +1,4 @@
-模方面板快捷键助手 V1.3.1
+模方面板快捷键助手 V1.4.0
 Copyright (C) 2026 shijye
 
 本软件采用 GNU General Public License v3.0（GPL-3.0）完全开源。
