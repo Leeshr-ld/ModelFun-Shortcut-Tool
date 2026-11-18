@@ -165,6 +165,14 @@ tests/                 自动化测试
 
 本项目与DASPATIAL、ModelFun官方无隶属或授权关系。ModelFun是第三方软件，其界面结构变化可能导致坐标识别失效。
 
+## 服务与支持
+
+软件以 GPL-3.0 免费开源；安装调优、面板坐标适配、定制开发、企业内网部署和年度维护可另行付费，详见[服务与支持](服务与支持.md)。需要闭源分发或书面 SLA 的团队，可了解[商业许可说明](商业许可说明.md)；接受外部贡献前请先阅读[贡献者许可协议（CLA）](CLA.md)。
+
+## Services and commercial licensing
+
+The tool is free and open source under GPL-3.0. Paid services (installation, panel calibration, customization, deployment, maintenance) are described in [服务与支持.md](服务与支持.md). Teams that cannot comply with GPL-3.0 may inquire about a [commercial license](商业许可说明.md). External contributions require the [CLA](CLA.md).
+
 ## 许可证
 
 本项目采用[GNU General Public License v3.0](LICENSE)。
